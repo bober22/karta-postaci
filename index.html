@@ -90,19 +90,39 @@
                 <li><b>Brave</b>: Premia (Advantage) do rzutów obronnych przeciwko strachowi.</li>
                 <li><b>Naturally Stealthy</b>: Możliwość ukrywania się za istotami większymi od ciebie.</li>
                 <li><b>Dary fay Fey Wanderer Spells</b> (Zaklęcia Wędrowca Fey)
-                Zyskujesz zaklęcia na stałe przygotowane:
-                Poziom 3: Charm Person
-                Poziom 5: Misty Step
-                Poziom 9: Summon Fey
-                Poziom 13: Dimension Door
-                Poziom 17: Mislead
-                Otrzymujesz też dar Fey (1k6):
-                1 – Iluzoryczne motyle latają wokół ciebie podczas odpoczynku.
-                2 – Z twoich włosów wyrastają kwiaty o świcie.
-                3 – Pachniesz cynamonem, lawendą lub innym kojącym zapachem.
-                4 – Twój cień tańczy, gdy nikt nie patrzy.
-                5 – Z głowy wyrastają rogi.
-                6 – Skóra i włosy zmieniają kolor codziennie </li>
+    div class="sekcja">
+    <h2>Dary Fey – <i>Fey Wanderer Spells</i></h2>
+    <button onclick="toggle(this)">Pokaż więcej</button>
+    <div class="zawartosc">
+      <h3>Zaklęcia zawsze przygotowane:</h3>
+      <ul>
+        <li><b>Poziom 3:</b> Charm Person</li>
+        <li><b>Poziom 5:</b> Misty Step</li>
+        <li><b>Poziom 9:</b> Summon Fey</li>
+        <li><b>Poziom 13:</b> Dimension Door</li>
+        <li><b>Poziom 17:</b> Mislead</li>
+      </ul>
+
+      <h3>Dar Fey (rzuć 1k6):</h3>
+      <ol>
+        <li>Iluzoryczne motyle latają wokół ciebie podczas odpoczynku.</li>
+        <li>Z twoich włosów wyrastają kwiaty o świcie.</li>
+        <li>Pachniesz cynamonem, lawendą lub innym kojącym zapachem.</li>
+        <li>Twój cień tańczy, gdy nikt nie patrzy.</li>
+        <li>Z głowy wyrastają rogi.</li>
+        <li>Skóra i włosy zmieniają kolor codziennie.</li>
+      </ol>
+    </div>
+  </div>
+
+  <script>
+    function toggle(btn) {
+      const zawartosc = btn.nextElementSibling;
+      const widoczne = zawartosc.style.display === "block";
+      zawartosc.style.display = widoczne ? "none" : "block";
+      btn.innerText = widoczne ? "Pokaż więcej" : "Ukryj";
+    }
+  </script>
             </ul>
         </div>
     </div>
