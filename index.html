@@ -1,100 +1,74 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-    <meta charset="UTF-8">
-    <title>Karta Postaci - Darjusza wielkiego</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-image: url('fantasy_bg_updated.png');
-            background-size: cover;
-            background-attachment: fixed;
-            background-position: center;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: #fff;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PTKM – Strona Główna</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-image: url('ptkmgłówna.jpg');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      color: #fff;
+    }
 
-        .container {
-            background-color: rgba(20, 20, 20, 0.85);
-            padding: 40px;
-            max-width: 900px;
-            margin: 50px auto;
-            border-radius: 16px;
-            box-shadow: 0 0 25px rgba(0, 0, 0, 0.8);
-        }
+    .overlay {
+      background-color: rgba(0, 0, 0, 0.6);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px 20px;
+    }
 
-        h1, h2 {
-            color: #FFD700;
-            text-align: center;
-            margin-bottom: 30px;
-        }
+    h1 {
+      font-size: 48px;
+      margin-bottom: 10px;
+      color: #FFD700;
+      text-shadow: 2px 2px 5px black;
+    }
 
-        h2 {
-            border-bottom: 2px solid #FFD700;
-            padding-bottom: 5px;
-        }
+    p {
+      font-size: 18px;
+      margin-bottom: 40px;
+    }
 
-        ul {
-            list-style-type: square;
-            padding-left: 20px;
-        }
+    .buttons {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
 
-        li {
-            margin-bottom: 10px;
-            line-height: 1.5em;
-        }
+    a.button {
+      background: #FFD700;
+      color: #000;
+      padding: 15px 30px;
+      text-decoration: none;
+      border-radius: 10px;
+      font-weight: bold;
+      box-shadow: 0 0 10px rgba(255, 215, 0, 0.7);
+      transition: transform 0.2s ease;
+    }
 
-        b {
-            color: #87CEFA;
-        }
-
-        .section {
-            margin-top: 40px;
-        }
-
-        .tag {
-            background-color: #FFD700;
-            color: #111;
-            font-weight: bold;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.85em;
-        }
-    </style>
+    a.button:hover {
+      transform: scale(1.05);
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Karta Postaci – Darjusza wielkiego</h1>
-
-        <div class="section">
-            <h2>Umiejętności w walce</h2>
-            <ul>
-                <li><b>Whip (Finesse)</b>: Zasięg 10 stóp, trafienie +5, obrażenia 1d4 + 3. Broń dystansowa oparta na Zręczności.</li>
-                <li><b>Blowgun</b>: Zasięg 25/100, trafienie +7, obrażenia 1d6 + 2. Cicha broń dystansowa, korzysta z biegłości i Zręczności.</li>
-                <li><b>Hunter’s Mark</b> <span class="tag">Zaklęcie</span>: Zasięg 90 stóp. Bonusowa akcja. Dodatkowe 1d6 obrażeń przy każdym trafieniu. Premia do testów Percepcji i Przetrwania wobec oznaczonego celu. Czas trwania: koncentracja, do 1 godziny.</li>
-                <li><b>Hall of Thorns</b> <span class="tag">Zaklęcie</span>: ST 9 Zręczność. Po trafieniu celem z broni dystansowej, każdy w promieniu 5 stóp musi wykonać rzut obronny. Obrażenia: 1d10 przebijających lub połowa przy sukcesie.</li>
-                <li><b>Ensnaring Strike</b> <span class="tag">Zaklęcie</span>: ST 9 Siła. Cel zostaje spętany winoroślami (przy nieudanym rzucie). Na początku tury otrzymuje 1d6 obrażeń. Trwa do 1 minuty lub utraty koncentracji.</li>
-                <li><b>Charm Person</b> <span class="tag">Zaklęcie</span>: ST 9 Mądrość. Próba oczarowania humanoida – jeśli nie zda testu, traktuje cię jak sprzymierzeńca przez 1 godzinę. Skuteczne tylko, jeśli nie jest wrogo nastawiony.</li>
-                <li><b>Cure Wounds</b> <span class="tag">Zaklęcie</span>: Leczenie dotykowe 2d8 - 1 punktów życia.</li>
-            </ul>
-        </div>
-
-        <div class="section">
-            <h2>Cechy klasowe i rasowe</h2>
-            <ul>
-                <li><b>Dreadful Strikes</b>: Dodaje 1d4 obrażeń psychicznych do ataków raz na turę. Dostęp do zaklęć: Charm Person, Misty Step, Summon Fey, Dimension Door, Mislead. Czarodziejskie "prezenty Fey" (np. cień tańczący samodzielnie).</li>
-                <li><b>Otherworldly Glamour</b>: Premia do testów Charyzmy równa Mądrości (min. +1). Darmowa biegłość w: Perswazja, Decepcja lub Występy.</li>
-                <li><b>Lucky</b>: Masz 2 punkty szczęścia (Luck Points). Możesz przerzucić swój test, albo wymusić na przeciwniku przerzut ataku. Odnawiają się po Długim Odpoczynku.</li>
-                <li><b>Halfling Luck</b>: Przerzut, jeśli wypadnie naturalna 1 na k20.</li>
-                <li><b>Brave</b>: Premia (Advantage) do rzutów obronnych przeciwko strachowi.</li>
-                <li><b>Naturally Stealthy</b>: Możliwość ukrywania się za istotami większymi od ciebie.</li>
-                <a href="fey.html">: Dary Fey Wanderera</a>
-            </ul>
-        </div>
-    </div>
-</body>
-</html>
+  <div class="overlay">
+    <h1>Witamy na PTKM!</h1>
+    <p>Twoje centrum przygód, bohaterów i dobrej zabawy.</p>
+    <div class="buttons">
+      <a href="karta.html" class="button">📜 Karta Postaci</a>
+      <a href="https://zbichutv.pl" target="_blank" class="button">📺 ZbichuTV</a>
     </div>
   </div>
 </body>
