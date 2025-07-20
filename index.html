@@ -60,10 +60,25 @@
     a.button:hover {
       transform: scale(1.05);
     }
+
+    .ad-container {
+      position: fixed;
+      top: 100px;
+      right: 20px;
+      z-index: 1000;
+      background-color: rgba(0,0,0,0.2);
+      padding: 10px;
+      border-radius: 10px;
+    }
   </style>
+
+  <!-- Google AdSense -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9962715504204806"
+          crossorigin="anonymous"></script>
 </head>
 <body>
-      <script async src="..."></script>
+
+  <!-- Treść strony -->
   <div class="overlay">
     <h1>Witamy na PTKM!</h1>
     <p>Twoje centrum przygód, bohaterów i dobrej zabawy.</p>
@@ -72,10 +87,19 @@
       <a href="karta.html" class="button">📜 Karta Postaci Bobra</a>
       <a href="https://www.twitch.tv/zbichutv" target="_blank" class="button">📺 ZbichuTV</a>
       <a href="https://discord.gg/pyV2D46KR2" target="_blank" class="button">🐗Discord</a>
-        <div class="reklama">
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9962715504204806"
-     crossorigin="anonymous"></script>
     </div>
   </div>
+
+  <!-- Reklama po prawej stronie -->
+  <div class="ad-container">
+    <ins class="adsbygoogle"
+         style="display:block; width:160px; height:600px"
+         data-ad-client="ca-pub-9962715504204806"
+         data-ad-slot="1234567890"></ins>
+    <script>
+      (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+  </div>
+
 </body>
 </html>
