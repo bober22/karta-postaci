@@ -7,6 +7,23 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
   <style>
+    .neon-game-btn {
+  display: inline-block;
+  margin-top: 1rem;
+  padding: 0.6rem 1.2rem;
+  background: rgba(255,255,255,0.06);
+  color: #00e7ff;
+  border: 1px solid #00e7ff;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: bold;
+  box-shadow: 0 0 10px #00e7ff, inset 0 0 5px rgba(255,255,255,0.1);
+  transition: 0.2s;
+}
+.neon-game-btn:hover {
+  box-shadow: 0 0 15px #ff00e6, 0 0 30px #00e7ff;
+  color: #ff00e6;
+}
     :root{ --bg:#0b0f14; --card:rgba(255,255,255,.08); --text:#f5f7fb; --muted:#b8c0cc; --gold:#ffd166; --accent:#7ee787 }
     *{box-sizing:border-box}
     body{margin:0; font-family:Inter,system-ui,Segoe UI,Arial,sans-serif; color:var(--text);
@@ -37,6 +54,7 @@
   </style>
 </head>
 <body>
+  <a class="neon-game-btn" href="neon_breakout.html">🎮 Zagraj w Neon Breakout</a>
   <div class="overlay">
     <div class="wrap">
       <header>

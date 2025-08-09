@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>Neon Breakout – PTKM</title>
+  <style>
+    :root{
+      --bg:#0a0b10;
+      --fg:#e6f3ff;
+      --neon1:#00e7ff;
+      --neon2:#ff00e6;
+      --neon3:#00ff95;
+      --glass:rgba(255,255,255,.06);
+      
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family: system-ui, Segoe UI, Roboto, sans-serif; color:var(--fg);
+      background: radial-gradient(1200px 600px at 10% 0%, #10122a 0%, #08090f 55%, #05060b 100%),
+                  radial-gradient(900px 500px at 90% 100%, #12001c 0%, #07070c 60%, #05060b 100%);
+      overflow:hidden;
+    }
+    .wrap{ position:relative; width:100%; height:100%; display:grid; place-items:center; padding:16px; }
+    canvas{ width:100%; max-width:940px; aspect-ratio:16/9; border-radius:18px; background: #05060b; box-shadow: 0 0 0 2px rgba(255,255,255,.03) inset, 0 0 60px #000; }
+
+    .hud{ position:absolute; top:16px; left:50%; transform:translateX(-50%); width:min(92vw,920px); display:flex; justify-content:space-between; gap:12px; pointer-events:none; }
+    .chip{ pointer-events:auto; user-select:none; background:var(--glass); backdrop-filter: blur(8px); border:1px solid rgba(255,255,255,.09); border-radius:999px; padding:8px 14px; display:flex; align-items:center; gap:10px; box-shadow:0 0 16px rgba(0, 231, 255, .15), inset 0 0 12px rgba(255,255,255,.03); }
+    .chip b{ color:var(--neon1); text-shadow:0 0 8px color-mix(in oklab, var(--neon1) 60%, transparent); }
+    .chip button{ all:unset; cursor:pointer; padding:.35rem .8rem; border-radius:999px; background:linear-gradient(90deg, var(--neon1), var(--neon2)); color:white; font-weight:600; box-shadow:0 0 14px color-mix(in oklab, var(--neon1) 60%, transparent); }
+    .chip button.secondary{ background:var(--glass); border:1px solid rgba(255,255,255,.12); box-shadow:none }
+
+    .overlay{ position:absolute; inset:0; display:none; place-items:center; padding:16px; }
+    .panel{ width:min(92vw,900px); background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03)); border:1px solid rgba(255,255,255,.12); border-radius:18px; box-shadow: 0 0 60px rgba(0,0,0,.6), inset 0 0 24px rgba(255,255,255,.05); padding:22px; }
+    .title{ font-size: clamp(28px, 5vw, 56px); font-weight:900; letter-spacing:.02em; margin:8px 0 6px; background: linear-gradient(90deg, var(--neon1), var(--neon2)); -webkit-background-clip:text; background-clip:text; color:transparent; text-shadow:0 0 18px color-mix(in oklab, var(--neon2) 40%, transparent); }
+    .subtitle{ opacity:.85; margin:0 0 16px; }
+
+    .grid{ display:grid; grid-template-columns: 1fr; gap:12px; }
+    @media (min-width:720px){ .grid{ grid-template-columns: 1.2fr .8fr; } }
+    .card{ background:var(--glass); border:1px solid rgba(255,255,255,.1); border-radius:14px; padding:14px; }
+    .btns{ display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
+    .btn{ all:unset; cursor:pointer; background:linear-gradient(90deg, var(--neon1), var(--neon2)); color:#fff; font-weight:800; letter-spacing:.04em; padding:10px 16px; border-radius:12px; box-shadow:0 0 24px rgba(0, 231, 255, .25); }
+    .btn.outline{ background:transparent; border:1px solid rgba(255,255,255,.2); box-shadow:none }
+
+    .touch{ position:absolute; inset:auto 0 10px 0; display:flex; justify-content:center; gap:24px; pointer-events:none; }
+    .touch button{ pointer-events:auto; all:unset; width:28vw; max-width:240px; aspect-ratio:5/2; display:grid; place-items:center; color:white; font-weight:900; letter-spacing:.06em; border-radius:18px; background: radial-gradient(120% 140% at 80% -20%, rgba(255,255,255,.16), rgba(255,255,255,.06) 40%, rgba(255,255,255,.02) 80%); border:1px solid rgba(255,255,255,.14); box-shadow:0 0 40px rgba(0,0,0,.45), inset 0 0 24px rgba(255,255,255,.06); }
+    .touch .fire{ width:22vw; max-width:200px; }
+
+    table{ width:100%; border-collapse:collapse; }
+    th,td{ padding:8px 10px; text-align:left; border-bottom:1px dashed rgba(255,255,255,.12); }
+    th{ color:var(--neon3) }
+    td:first-child{ width:3ch }
+    .muted{ opacity:.75 }
+    .right{ text-align:right }
+    input[type=text]{ width:100%; padding:10px 12px; border-radius:12px; background:#11131b; border:1px solid rgba(255,255,255,.15); color:var(--fg); font-weight:700; letter-spacing:.2em; text-transform:uppercase; }
+    .home-btn{
+  position: fixed;
+  top: 16px; left: 16px;
+  z-index: 9999;
+  display: inline-flex; align-items: center; gap: .5rem;
+  padding: .6rem 1rem;
+  border-radius: 999px;
+  background: var(--glass, rgba(255,255,255,.06));
+  color: var(--fg, #e6f3ff);
+  text-decoration: none;
+  border: 1px solid color-mix(in oklab, var(--neon1,#00e7ff), #fff 20%);
+  box-shadow: 0 0 12px var(--neon1,#00e7ff), inset 0 0 8px rgba(255,255,255,.08);
+  backdrop-filter: blur(8px);
+  transition: .2s transform, .2s box-shadow, .2s filter;
+}
+.home-btn:hover{ transform: translateY(-1px); box-shadow: 0 0 16px var(--neon1), 0 0 32px var(--neon2,#ff00e6); filter: brightness(1.1); }
+.home-btn:active{ transform: translateY(0); }
+@media (max-width:600px){
+  .home-btn{ padding:.5rem .9rem; font-size:.95rem; }
+}
+  </style>
+</head>
+<body>  
+    <a class="home-btn" href="index.html" aria-label="Powrót na stronę główną">⟵ Strona główna</a>
+    
+  <div class="wrap">
+    <canvas id="game" aria-label="Neon Breakout – gra"></canvas>
+
+    <!-- HUD -->
+    <div class="hud">
+      <div class="chip" id="hudLeft"><span>Wynik: <b id="score">0</b></span></div>
+      <div class="chip" id="hudRight">
+        <button id="pauseBtn" class="secondary" aria-label="Wstrzymaj / Wznów">⏸︎</button>
+        <button id="restartBtn" aria-label="Restart">↻ Restart</button>
+      </div>
+    </div>
+    <!-- Start / Menu -->
+    <div id="menu" class="overlay" role="dialog" aria-modal="true" style="display:flex;">
+      <div class="panel">
+        <div class="title">NEON BREAKOUT</div>
+        <p class="subtitle">Sterowanie: ← → lub A/D, spacja – start / wznowienie. Na telefonie: dotykowe przyciski / przeciąganie.</p>
+        <div class="grid">
+          <div class="card">
+            <h3>Top 3 – Tablica Wyników</h3>
+            <table id="lbTable" aria-label="Tabela wyników">
+              <thead><tr><th>#</th><th>Inicjały</th><th class="right">Wynik</th></tr></thead>
+              <tbody></tbody>
+            </table>
+            <div class="btns">
+              <button class="btn outline" id="resetLB">Wyczyść tablicę</button>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Poziom</h3>
+            <p class="muted">Klocki przyspieszają z każdym levelem. Traf w każdy klocek, nie zgub piłki. Powodzenia!</p>
+            <div class="btns">
+              <button class="btn" id="startBtn">▶ Zaczynajmy</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game Over / Highscore input -->
+    <div id="gameover" class="overlay">
+      <div class="panel">
+        <div class="title">Koniec gry</div>
+        <p class="subtitle">Twój wynik: <b id="finalScore">0</b></p>
+        <div id="hiscoreForm" class="card" hidden>
+          <h3>Nowy rekord! Podaj 3 litery</h3>
+          <form id="saveForm">
+            <input id="initials" type="text" maxlength="3" placeholder="ABC" autocomplete="off" aria-label="Twoje inicjały" required />
+            <div class="btns" style="margin-top:10px">
+              <button class="btn" type="submit">Zapisz</button>
+            </div>
+          </form>
+        </div>
+        <div class="btns">
+          <button class="btn" id="againBtn">↻ Zagraj ponownie</button>
+          <button class="btn outline" id="menuBtn">🏠 Menu</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile touch controls -->
+    <div class="touch" id="touchCtl">
+      <button id="leftBtn" aria-label="W lewo">⟵</button>
+      <button id="fireBtn" class="fire" aria-label="Start / pauza">●</button>
+      <button id="rightBtn" aria-label="W prawo">⟶</button>
+    </div>
+  </div>
+
+  <script>
+  // ====== Utility ======
+  const lerp = (a,b,t)=>a+(b-a)*t;
+  const clamp = (x,min,max)=>Math.min(max,Math.max(min,x));
+  const DPR = Math.max(1, Math.min(window.devicePixelRatio||1, 2));
+
+  // ====== Canvas Setup ======
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  function resize(){
+    const w = Math.min(window.innerWidth-32, 940);
+    const h = w * 9/16;
+    canvas.style.height = h + 'px';
+    canvas.width = Math.floor(940 * DPR);
+    canvas.height = Math.floor(940 * 9/16 * DPR);
+    scale = canvas.width / 940;
+  }
+  let scale = 1;
+  window.addEventListener('resize', resize);
+  resize();
+
+  // ====== Game State ======
+  const State = { MENU:0, PLAY:1, PAUSE:2, OVER:3 };
+  let state = State.MENU;
+
+  const hudScore = document.getElementById('score');
+  const finalScoreEl = document.getElementById('finalScore');
+  const hiscoreForm = document.getElementById('hiscoreForm');
+  const saveForm = document.getElementById('saveForm');
+  const initialsInput = document.getElementById('initials');
+
+  // Leaderboard (Top 3)
+  const LB_KEY = 'breakout_leaderboard';
+  function getLB(){ try{ return JSON.parse(localStorage.getItem(LB_KEY))||[] }catch{ return [] } }
+  function setLB(arr){ localStorage.setItem(LB_KEY, JSON.stringify(arr.slice(0,3))); renderLB(); }
+  function tryAddScore(name, score){ const lb = getLB(); lb.push({name, score}); lb.sort((a,b)=>b.score - a.score); setLB(lb); }
+  function qualifies(score){ const lb = getLB(); if(lb.length<3) return true; return score > lb[lb.length-1].score; }
+  function renderLB(){
+    const tbody = document.querySelector('#lbTable tbody');
+    tbody.innerHTML = '';
+    const lb = getLB();
+    if(lb.length===0){ const tr=document.createElement('tr'); tr.innerHTML=`<td class="muted" colspan="3">Brak zapisanych wyników</td>`; tbody.appendChild(tr); return; }
+    lb.slice(0,3).forEach((r,i)=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${i+1}</td><td>${r.name}</td><td class="right">${r.score}</td>`; tbody.appendChild(tr); });
+  }
+  renderLB();
+  document.getElementById('resetLB').addEventListener('click', ()=>{ localStorage.removeItem(LB_KEY); renderLB(); });
+
+  // ====== Entities ======
+  const WORLD = { w:940, h:940*9/16 };
+  const PAD = { w:140, h:18, x:WORLD.w/2-70, y:WORLD.h-42, spd:560 };
+  const BALL = { r:9, x:WORLD.w/2, y:PAD.y-10, vx:240, vy:-320, speedMul:1 };
+  let sticky = true;
+
+  let bricks = []; const ROWS_START = 5, COLS = 12; let rows = ROWS_START; let level=1;
+  const brickMargin = 6, wallMargin=28, topOffset=70, brickH=22;
+
+  let score = 0, lives = 3;
+
+  function resetBall(){
+    BALL.x = PAD.x + PAD.w/2; BALL.y = PAD.y - BALL.r - 2;
+    BALL.vx = 220 * (Math.random()<.5?-1:1); BALL.vy = -320 - Math.random()*60; sticky = true;
+  }
+  function resetPaddle(){ PAD.w = 140; PAD.spd = 560; }
+
+  function buildBricks(){
+    bricks = [];
+    const totalW = WORLD.w - wallMargin*2;
+    const brickW = (totalW - (COLS-1)*brickMargin) / COLS;
+    for(let r=0;r<rows;r++){
+      for(let c=0;c<COLS;c++){
+        const x = wallMargin + c*(brickW+brickMargin);
+        const y = topOffset + r*(brickH+brickMargin);
+        bricks.push({x,y,w:brickW,h:brickH,hp:1, hue: (c/COLS*300)|0});
+      }
+    }
+  }
+  buildBricks();
+
+  // ====== Input ======
+  let left=false, right=false;
+  window.addEventListener('keydown', e=>{
+    if(['ArrowLeft','a','A'].includes(e.key)) left=true;
+    if(['ArrowRight','d','D'].includes(e.key)) right=true;
+    if(e.code==='Space') handleFire();
+  });
+  window.addEventListener('keyup', e=>{
+    if(['ArrowLeft','a','A'].includes(e.key)) left=false;
+    if(['ArrowRight','d','D'].includes(e.key)) right=false;
+  });
+
+  const touchCtl = document.getElementById('touchCtl');
+  let dragging=false;
+  canvas.addEventListener('touchstart', e=>{ dragging=true; moveFromTouch(e); }, {passive:true});
+  canvas.addEventListener('touchmove', e=>{ if(dragging) moveFromTouch(e); }, {passive:true});
+  canvas.addEventListener('touchend', ()=> dragging=false);
+  function moveFromTouch(e){
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.touches[0].clientX - rect.left) / rect.width * WORLD.w;
+    PAD.x = clamp(x - PAD.w/2, 0, WORLD.w - PAD.w);
+    if(sticky) BALL.x = PAD.x + PAD.w/2;
+  }
+  document.getElementById('leftBtn').addEventListener('touchstart', ()=>left=true, {passive:true});
+  document.getElementById('leftBtn').addEventListener('touchend', ()=>left=false);
+  document.getElementById('rightBtn').addEventListener('touchstart', ()=>right=true, {passive:true});
+  document.getElementById('rightBtn').addEventListener('touchend', ()=>right=false);
+  document.getElementById('fireBtn').addEventListener('click', handleFire);
+
+  // ====== Buttons & Overlays ======
+  const menuEl = document.getElementById('menu');
+  const overEl = document.getElementById('gameover');
+
+  function showOverlay(menuVisible, overVisible){
+    // JEDYNE źródło prawdy dla widoczności overlayów
+    menuEl.style.display = menuVisible ? 'flex' : 'none';
+    overEl.style.display = overVisible ? 'flex' : 'none';
+  }
+
+  document.getElementById('pauseBtn').addEventListener('click', ()=>{
+    if(state===State.PLAY){ state=State.PAUSE; showOverlay(true,false); }
+    else if(state===State.PAUSE){ state=State.PLAY; showOverlay(false,false); }
+  });
+  document.getElementById('restartBtn').addEventListener('click', ()=>{ restart(); });
+  document.getElementById('startBtn').addEventListener('click', ()=>{ start(); });
+  document.getElementById('againBtn').addEventListener('click', ()=>{ restart(); });
+  document.getElementById('menuBtn').addEventListener('click', ()=>{ state=State.MENU; showOverlay(true,false); });
+
+  saveForm?.addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const name = (initialsInput.value||'???').toUpperCase().slice(0,3);
+    tryAddScore(name, score);
+    hiscoreForm.hidden = true; renderLB();
+  });
+
+  function handleFire(){
+    if(state===State.MENU){ start(); return; }
+    if(state===State.PLAY && sticky){ sticky=false; return; }
+    if(state===State.PAUSE){ state=State.PLAY; showOverlay(false,false); return; }
+    if(state===State.OVER){ restart(); return; }
+  }
+
+  function start(){
+    state = State.PLAY; score=0; lives=3; level=1; rows = ROWS_START; resetPaddle(); buildBricks(); resetBall();
+    showOverlay(false,false);
+  }
+  function restart(){
+    state = State.PLAY; score=0; level=1; rows=ROWS_START; resetPaddle(); buildBricks(); resetBall();
+    showOverlay(false,false);
+  }
+
+  // ====== Loop ======
+  let last=0;
+  function loop(ts){
+    requestAnimationFrame(loop);
+    const dt = Math.min(0.034, (ts - last)/1000 || 0);
+    last = ts;
+
+    if(state===State.PLAY){ update(dt); }
+    draw();
+  }
+  requestAnimationFrame(loop);
+
+  function update(dt){
+    const dir = (right?1:0) - (left?1:0);
+    PAD.x += dir * PAD.spd * dt;
+    PAD.x = clamp(PAD.x, 0, WORLD.w - PAD.w);
+
+    if(sticky){ BALL.x = PAD.x + PAD.w/2; return; }
+
+    BALL.x += BALL.vx * dt * BALL.speedMul;
+    BALL.y += BALL.vy * dt * BALL.speedMul;
+
+    if(BALL.x < BALL.r){ BALL.x = BALL.r; BALL.vx = Math.abs(BALL.vx); }
+    if(BALL.x > WORLD.w - BALL.r){ BALL.x = WORLD.w - BALL.r; BALL.vx = -Math.abs(BALL.vx); }
+    if(BALL.y < BALL.r + 8){ BALL.y = BALL.r + 8; BALL.vy = Math.abs(BALL.vy); }
+
+    if(BALL.y + BALL.r >= PAD.y && BALL.y - BALL.r <= PAD.y + PAD.h && BALL.x >= PAD.x && BALL.x <= PAD.x + PAD.w && BALL.vy>0){
+      BALL.y = PAD.y - BALL.r - 0.01;
+      const hit = (BALL.x - (PAD.x + PAD.w/2)) / (PAD.w/2);
+      const angle = hit * (Math.PI * 0.36);
+      const speed = Math.hypot(BALL.vx, BALL.vy) * 1.02;
+      BALL.vx = speed * Math.sin(angle);
+      BALL.vy = -Math.abs(speed * Math.cos(angle));
+    }
+
+    for(let i=0;i<bricks.length;i++){
+      const b = bricks[i]; if(b.hp<=0) continue;
+      if(BALL.x + BALL.r < b.x || BALL.x - BALL.r > b.x + b.w || BALL.y + BALL.r < b.y || BALL.y - BALL.r > b.y + b.h) continue;
+      const prevX = BALL.x - BALL.vx * dt; const prevY = BALL.y - BALL.vy * dt;
+      const insideX = prevX >= b.x && prevX <= b.x + b.w;
+      const insideY = prevY >= b.y && prevY <= b.y + b.h;
+      if(insideX){ BALL.vy *= -1; }
+      else if(insideY){ BALL.vx *= -1; }
+      else { BALL.vx *= -1; BALL.vy *= -1; }
+      b.hp = 0; score += 10; hudScore.textContent = score;
+    }
+
+    bricks = bricks.filter(b=>b.hp>0);
+
+    if(bricks.length===0){
+      level++; rows = Math.min(ROWS_START + level-1, 9);
+      BALL.speedMul *= 1.06;
+      PAD.w = Math.max(88, PAD.w - 8);
+      buildBricks(); resetBall();
+    }
+
+    if(BALL.y - BALL.r > WORLD.h){
+      lives--;
+      if(lives<=0){
+        state = State.OVER; finalScoreEl.textContent = score; showOverlay(false,true);
+        if(qualifies(score)){ hiscoreForm.hidden = false; initialsInput.value=''; initialsInput.focus({preventScroll:true}); }
+        else { hiscoreForm.hidden = true; }
+      } else { resetBall(); }
+    }
+  }
+
+  function draw(){
+    ctx.save();
+    ctx.clearRect(0,0,canvas.width, canvas.height);
+    ctx.scale(DPR, DPR);
+
+    drawFrame();
+
+    for(const b of bricks){
+      const x=b.x, y=b.y, w=b.w, h=b.h;
+      const grad = ctx.createLinearGradient(x, y, x+w, y+h);
+      grad.addColorStop(0, `hsl(${b.hue} 100% 56% / .8)`);
+      grad.addColorStop(1, `hsl(${(b.hue+60)%360} 100% 56% / .8)`);
+      ctx.fillStyle = grad;
+      ctx.shadowColor = `hsl(${b.hue} 100% 60%)`;
+      ctx.shadowBlur = 16;
+      roundRect(x, y, w, h, 6);
+      ctx.fill();
+    }
+
+    ctx.shadowColor = 'rgba(0,231,255,.9)';
+    ctx.shadowBlur = 18;
+    const padGrad = ctx.createLinearGradient(PAD.x, PAD.y, PAD.x+PAD.w, PAD.y);
+    padGrad.addColorStop(0, 'rgba(0,231,255,.9)'); padGrad.addColorStop(1, 'rgba(255,0,230,.9)');
+    ctx.fillStyle = padGrad; roundRect(PAD.x, PAD.y, PAD.w, PAD.h, 9); ctx.fill();
+
+    ctx.shadowColor = 'rgba(255,255,255,.9)'; ctx.shadowBlur = 16;
+    const r = BALL.r; const g2 = ctx.createRadialGradient(BALL.x, BALL.y, r*.2, BALL.x, BALL.y, r*1.2);
+    g2.addColorStop(0, '#fff'); g2.addColorStop(1, 'rgba(255,255,255,.1)');
+    ctx.fillStyle = g2; circle(BALL.x, BALL.y, r); ctx.fill();
+
+    if(state===State.PAUSE){ centerText('PAUZA', WORLD.w/2, WORLD.h/2, 46); }
+
+    ctx.restore();
+  }
+
+  function drawFrame(){
+    const m=8;
+    const g = ctx.createLinearGradient(0,0,WORLD.w,0);
+    g.addColorStop(0,'rgba(0,231,255,.7)'); g.addColorStop(1,'rgba(255,0,230,.7)');
+    ctx.strokeStyle = g; ctx.lineWidth = 3; ctx.shadowColor='rgba(0,231,255,.45)'; ctx.shadowBlur=16;
+    roundRect(m,m,WORLD.w-m*2,WORLD.h-m*2,16); ctx.stroke();
+  }
+  function centerText(txt,x,y,size){
+    ctx.save(); ctx.font = `700 ${size}px system-ui, Segoe UI, Roboto`; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.shadowColor='rgba(255,255,255,.35)'; ctx.shadowBlur=20; ctx.fillStyle='#e6f3ff'; ctx.fillText(txt,x,y);
+    ctx.restore();
+  }
+  function roundRect(x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+  }
+  function circle(x,y,r){ ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.closePath(); }
+
+  // Start z widocznym menu
+  showOverlay(true,false);
+  hudScore.textContent = '0';
+  </script>
+</body>
+</html>
