@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>PTKM – Strona Główna</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root{ --bg:#0b0f14; --card:rgba(255,255,255,.08); --text:#f5f7fb; --muted:#b8c0cc; --gold:#ffd166; --accent:#7ee787 }
+    *{box-sizing:border-box}
+    body{margin:0; font-family:Inter,system-ui,Segoe UI,Arial,sans-serif; color:var(--text);
+      background:
+        radial-gradient(1000px 500px at -10% 0%, #182532 0%, transparent 60%),
+        radial-gradient(900px 500px at 110% 10%, #14202b 0%, transparent 60%),
+        url('ptkmglowna.png') center/cover fixed, var(--bg);
+      min-height:100vh;
+    }
+    .overlay{min-height:100vh; background:linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,.55))}
+    .wrap{max-width:1100px; margin:auto; padding:28px}
+    header{display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:24px}
+    .brand{font-weight:900; font-size:1.4rem; letter-spacing:.5px}
+    .btn{appearance:none; border:none; padding:.8rem 1.1rem; border-radius:12px; font-weight:800; cursor:pointer}
+    .btn-ghost{background:rgba(255,255,255,.12); color:var(--text)}
+    .hero{
+      display:grid; grid-template-columns:1.2fr .8fr; gap:24px; align-items:center;
+      padding:24px; background:var(--card); border-radius:18px; box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 20px 50px rgba(0,0,0,.35);
+      backdrop-filter: blur(10px);
+    }
+    h1{margin:.2rem 0 1rem; font-size:2.2rem}
+    p{color:var(--muted); line-height:1.6}
+    .cta{display:flex; gap:12px; flex-wrap:wrap; margin-top:14px}
+    .btn-primary{background:var(--gold); color:#111}
+    .btn-accent{background:var(--accent); color:#111}
+    .card{background:rgba(255,255,255,.06); border-radius:14px; padding:16px}
+    @media (max-width:900px){ .hero{grid-template-columns:1fr} }
+  </style>
+</head>
+<body>
+  <div class="overlay">
+    <div class="wrap">
+      <header>
+        <div class="brand">PTKM</div>
+        <nav class="cta">
+          <a class="btn btn-ghost" href="character.html">Karta postaci</a>
+          <a class="btn btn-ghost" href="snake.html">Zagraj w SNAKE</a>
+        </nav>
+      </header>
+
+      <section class="hero">
+        <div>
+          <h1>Witaj na PTKM</h1>
+          <p>Nowoczesna strona serwera z klimatem fantasy. Sprawdź swoją <strong>kartę postaci</strong> i zagraj w prostą <strong>grę przeglądarkową</strong> – klasyczny Snake sterowany <strong>WASD</strong> lub strzałkami.</p>
+          <div class="cta">
+            <a class="btn btn-primary" href="character.html">Przejdź do karty postaci</a>
+            <a class="btn btn-accent" href="snake.html">Zagraj w SNAKE</a>
+          </div>
+        </div>
+        <div class="card">
+          <h3 style="margin:0 0 .6rem">Szybkie info</h3>
+          <ul style="margin:0; padding-left:18px; color:var(--text); line-height:1.6">
+            <li>WASD lub strzałki – sterowanie w grze</li>
+            <li>P – pauza, R – reset wąż</li>
+            <li>Najlepszy wynik zapisuje się lokalnie</li>
+          </ul>
+        </div>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

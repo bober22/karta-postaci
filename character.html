@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Karta Postaci – PTKM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#0b0f14; --card:rgba(255,255,255,.08); --text:#f5f7fb; --muted:#b8c0cc; --accent:#7ee787; --gold:#ffd166; --cyan:#6fd3ff; --ring: 0 0 0 1px rgba(255,255,255,.08), 0 14px 40px rgba(0,0,0,.35)}
+    *{box-sizing:border-box} body{margin:0; font-family:Inter,system-ui,sans-serif; color:var(--text); background:var(--bg); min-height:100vh}
+    .wrap{max-width:1000px; margin:auto; padding:24px; display:flex; flex-direction:column; gap:24px}
+    header{display:flex; justify-content:space-between; padding:18px 20px; background:var(--card); border-radius:16px; box-shadow:var(--ring); backdrop-filter:blur(10px)}
+    .title{display:flex; gap:14px} .avatar{width:54px; height:54px; border-radius:12px; background:linear-gradient(135deg,#243b55,#141e30); display:grid; place-items:center; font-weight:800}
+    .badge{padding:.35rem .6rem; border-radius:999px; background:rgba(255,255,255,.1); color:var(--gold); font-weight:700; font-size:.8rem}
+    .btn{padding:.7rem 1rem; border-radius:12px; text-decoration:none; font-weight:700}
+    .btn-primary{background:var(--gold); color:#000}
+    .btn-ghost{background:rgba(255,255,255,.12); color:var(--text)}
+    section{background:var(--card); border-radius:16px; box-shadow:var(--ring); backdrop-filter:blur(10px); padding:18px}
+    h2{margin-top:0; font-size:1.1rem; color:var(--cyan)}
+    ul{margin:0; padding-left:18px; line-height:1.6}
+    li strong{color:var(--gold)}
+    textarea{width:100%; min-height:80px; resize:vertical; background:rgba(255,255,255,.05); border:none; border-radius:8px; color:var(--text); padding:8px; font-family:inherit}
+    .overlay{min-height:100vh; background:linear-gradient(180deg, rgba(0,0,0,.45), rgba(0,0,0,.7))}
+    body{background:
+      radial-gradient(1000px 500px at -10% 0%, #182532 0%, transparent 60%),
+      radial-gradient(900px 500px at 110% 10%, #14202b 0%, transparent 60%),
+      url('fantasy_bg_updated.png') center/cover fixed, var(--bg)}
+    .saveinfo{color:var(--muted); font-size:.8rem; margin-top:6px}
+  </style>
+</head>
+<body>
+<div class="overlay">
+<div class="wrap">
+<header>
+  <div class="title">
+    <div class="avatar">HR</div>
+    <div>
+      <div style="font-size:1.25rem; font-weight:800">Halfling Ranger <span class="badge">Fey Wanderer</span></div>
+      <div style="color:var(--muted); font-size:.9rem">Poziom 3 • AC 15 • HP 25</div>
+    </div>
+  </div>
+  <div>
+    <a class="btn btn-ghost" href="index.html">← Strona główna</a>
+    <a class="btn btn-primary" href="snake.html">Zagraj w SNAKE</a>
+  </div>
+</header>
+<section>
+  <h2>Ataki i zaklęcia</h2>
+  <ul>
+    <li><strong>Whip (Finesse):</strong> zasięg 10 ft, +5 do trafienia, 1k4+3 obrażeń ciętych</li>
+    <li><strong>Blowgun:</strong> zasięg 25/100 ft, +7 do trafienia, 1k6+2 obrażeń przebijających</li>
+    <li><strong>Hunter’s Mark:</strong> zasięg 90 ft, +1k6 obrażeń, premia do testów Percepcji i Przetrwania; koncentracja 1h</li>
+    <li><strong>Hail of Thorns:</strong> ST Zr 9, 1k10 obrażeń obszarowych</li>
+    <li><strong>Ensnaring Strike:</strong> ST Siła 9, spętanie i 1k6 obrażeń/tura</li>
+    <li><strong>Charm Person:</strong> ST Mdr 9, oczarowanie na 1h</li>
+    <li><strong>Cure Wounds:</strong> leczenie 2k8–1 HP</li>
+  </ul>
+</section>
+<section>
+  <h2>Cechy klasowe i rasowe</h2>
+  <ul>
+    <li><strong>Dreadful Strikes:</strong> +1k4 obrażeń psychicznych raz/turę; dostęp do zaklęć Fey</li>
+    <li><strong>Otherworldly Glamour:</strong> premia do testów Charyzmy = Mądrość; biegłość w Perswazji, Decepcji lub Występach</li>
+    <li><strong>Lucky:</strong> 2 punkty szczęścia na przerzuty</li>
+    <li><strong>Halfling Luck:</strong> przerzut 1 na k20</li>
+    <li><strong>Brave:</strong> przewaga vs. strach</li>
+    <li><strong>Naturally Stealthy:</strong> ukrywanie się za większymi istotami</li>
+  </ul>
+</section>
+<section>
+  <h2>Bio</h2>
+  <textarea id="bioField" placeholder="Tutaj wpisz opis swojej postaci..."></textarea>
+  <div id="bioInfo" class="saveinfo"></div>
+</section>
+<section>
+  <h2>Notatki</h2>
+  <textarea id="notesField" placeholder="Twoje notatki..."></textarea>
+  <div id="notesInfo" class="saveinfo"></div>
+</section>
+</div>
+<script>
+(function(){
+  const BIO_KEY = 'ptkm_bio_v1';
+  const NOTES_KEY = 'ptkm_notes_v1';
+  const bio = document.querySelector('#bioField');
+  const notes = document.querySelector('#notesField');
+  const bioInfo = document.querySelector('#bioInfo');
+  const notesInfo = document.querySelector('#notesInfo');
+
+  function load(){
+    try{ bio.value = localStorage.getItem(BIO_KEY) || ''; }catch(e){}
+    try{ notes.value = localStorage.getItem(NOTES_KEY) || ''; }catch(e){}
+  }
+  let t1, t2;
+  function saveBio(){
+    try{ localStorage.setItem(BIO_KEY, bio.value); bioInfo.textContent='Zapisano'; setTimeout(()=>bioInfo.textContent='',1200);}catch(e){}
+  }
+  function saveNotes(){
+    try{ localStorage.setItem(NOTES_KEY, notes.value); notesInfo.textContent='Zapisano'; setTimeout(()=>notesInfo.textContent='',1200);}catch(e){}
+  }
+  bio && bio.addEventListener('input', ()=>{ clearTimeout(t1); t1=setTimeout(saveBio, 400); });
+  notes && notes.addEventListener('input', ()=>{ clearTimeout(t2); t2=setTimeout(saveNotes, 400); });
+  load();
+})();
+</script>
+</div>
+</body>
+</html>

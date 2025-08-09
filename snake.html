@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>PTKM – Snake (Arcade)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@600;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b0f14; --card:rgba(255,255,255,.08); --text:#f5f7fb; --muted:#b8c0cc;
+    --gold:#ffd166; --accent:#7ee787; --danger:#ff6b6b;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; color:var(--text); font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;
+    background: var(--bg) url("arcade.png") center/cover fixed no-repeat;
+    min-height:100vh; display:grid; place-items:center; padding:16px;
+  }
+
+  .wrap{width:min(94vw,900px);}
+  header{display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:10px}
+  a.btn,button.btn{
+    appearance:none; border:none; background:var(--card); color:var(--text);
+    padding:.6rem .9rem; border-radius:12px; text-decoration:none; font-weight:800; cursor:pointer;
+    box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 6px 18px rgba(0,0,0,.35);
+  }
+
+  .shell{
+    display:grid; gap:12px;
+    grid-template-columns: 1fr;
+  }
+
+  .hud{
+    display:grid; gap:12px;
+    grid-template-columns: 1.2fr .8fr;
+  }
+  @media (max-width: 720px){
+    .hud{ grid-template-columns: 1fr; }
+  }
+
+  .panel{
+    padding:12px 14px; border-radius:14px; background:var(--card);
+    box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 18px 40px rgba(0,0,0,.35);
+  }
+  .stats{display:flex; flex-wrap:wrap; gap:12px; align-items:center}
+  .stat{display:flex; gap:8px; align-items:center}
+  .stat .v{font-weight:800}
+
+  .board{
+    background:#0e141b; border-radius:16px; overflow:hidden; display:grid; place-items:center;
+    box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 24px 60px rgba(0,0,0,.5);
+    position:relative;
+  }
+  canvas{width:100%; height:auto; display:block; image-rendering: pixelated}
+
+  .help{margin-top:10px; color:var(--muted); text-align:center}
+
+  /* TOP 3 */
+  .top3 h3{margin:0 0 6px 0; font-size:14px; letter-spacing:.5px; color:var(--gold)}
+  .table{width:100%; border-collapse:collapse; font-size:14px}
+  .table td{padding:6px 4px}
+  .table tr:not(:last-child) td{border-bottom:1px solid rgba(255,255,255,.07)}
+  .table .rank{opacity:.8; width:2ch}
+  .table .name{font-weight:800}
+  .table .score{text-align:right}
+
+  /* On-screen controls (mobile) */
+  .controls{
+    position:fixed; left:0; right:0; bottom:12px; display:flex; justify-content:center; pointer-events:none;
+  }
+  .pad{
+    pointer-events:auto; user-select:none; touch-action:none;
+    display:grid; grid-template-columns: 64px 64px 64px; grid-template-rows: 64px 64px 64px; gap:8px;
+    background:rgba(0,0,0,.15); padding:10px; border-radius:18px; backdrop-filter: blur(6px);
+    box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 8px 30px rgba(0,0,0,.45);
+  }
+  .pad .btnpad{
+    display:grid; place-items:center; border-radius:12px; background:rgba(255,255,255,.1);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);
+    font-weight:800;
+  }
+  .pad .btnpad:active{transform:scale(.98)}
+  .pad .empty{opacity:0}
+
+  .actions{
+    margin-left:14px; display:grid; gap:8px; align-content:center;
+  }
+  .actions .btn{
+    width:132px; height:48px; display:grid; place-items:center; font-weight:800;
+    background:rgba(255,255,255,.12);
+  }
+  .actions .btn.danger{background:rgba(255,107,107,.2); color:#fff}
+
+  @media (min-width:860px){
+    .controls{display:none}
+  }
+
+  /* Modal inicjałów */
+  .modal{
+    position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.5);
+    padding:20px; z-index:10;
+  }
+  .modal.open{display:grid}
+  .dialog{
+    width:min(92vw,420px); background:#10161e; border-radius:16px; padding:18px;
+    box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 24px 60px rgba(0,0,0,.6);
+  }
+  .dialog h2{margin:0 0 8px 0}
+  .dialog p{margin:0 0 12px 0; color:var(--muted)}
+  .initials{
+    display:flex; gap:8px; justify-content:center; margin:12px 0 16px;
+  }
+  .initials input{
+    width:64px; height:64px; text-transform:uppercase; text-align:center; font-size:28px; font-weight:800;
+    border:none; outline:none; color:var(--text); background:rgba(255,255,255,.08); border-radius:12px;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);
+  }
+  .dialog .row{display:flex; gap:8px; justify-content:flex-end}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <a class="btn" href="index.html">← PTKM</a>
+      <a class="btn" href="character.html">Karta postaci</a>
+    </header>
+
+    <div class="shell">
+      <div class="hud">
+        <div class="panel">
+          <div class="stats">
+            <div class="stat">Wynik: <span class="v" id="score">0</span></div>
+            <div class="stat">Rekord: <span class="v" id="best">0</span></div>
+            <div class="stat">Sterowanie: WASD / ←↑→↓ • P – pauza • R – reset</div>
+          </div>
+        </div>
+        <div class="panel top3">
+          <h3>TOP 3 (lokalnie)</h3>
+          <table class="table" id="topTable">
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="board">
+        <canvas id="game" width="600" height="600"></canvas>
+      </div>
+      <div class="help">Siatka 30×30. Zbieraj jedzenie, nie ugryź ogona ani ściany!</div>
+    </div>
+  </div>
+
+  <!-- Mobilne sterowanie -->
+  <div class="controls">
+    <div class="pad" aria-label="Sterowanie dotykowe">
+      <div class="empty"></div>
+      <div class="btnpad" data-dir="up">▲</div>
+      <div class="empty"></div>
+
+      <div class="btnpad" data-dir="left">◀</div>
+      <div class="empty"></div>
+      <div class="btnpad" data-dir="right">▶</div>
+
+      <div class="empty"></div>
+      <div class="btnpad" data-dir="down">▼</div>
+      <div class="empty"></div>
+    </div>
+    <div class="actions">
+      <button class="btn" id="btnPause">Pauza</button>
+      <button class="btn danger" id="btnReset">Reset</button>
+    </div>
+  </div>
+
+  <!-- Modal inicjałów -->
+  <div class="modal" id="initialsModal" role="dialog" aria-modal="true">
+    <div class="dialog">
+      <h2>Nowy rekord!</h2>
+      <p>Wpisałeś się do TOP 3. Podaj swoje 3 litery:</p>
+      <div class="initials">
+        <input id="in1" maxlength="1" autofocus>
+        <input id="in2" maxlength="1">
+        <input id="in3" maxlength="1">
+      </div>
+      <div class="row">
+        <button class="btn" id="saveInitials">Zapisz</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // DOM
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const scoreEl = document.getElementById('score');
+  const bestEl  = document.getElementById('best');
+  const topTable = document.querySelector('#topTable tbody');
+
+  // Stałe gry
+  const GRID = 30;                 // 30x30
+  const CELL = canvas.width / GRID; // 600/30 = 20px
+  const SPEED_START = 8;           // FPS
+  const SPEED_STEP = .35;
+
+  // Storage keys
+  const BEST_KEY = 'ptkm_snake_best';
+  const TOP_KEY  = 'ptkm_snake_top3'; // [{name,score}]
+
+  // Rekordy
+  let best = +localStorage.getItem(BEST_KEY) || 0;
+  bestEl.textContent = best;
+
+  function loadTop(){
+    try{
+      const raw = localStorage.getItem(TOP_KEY);
+      return raw ? JSON.parse(raw) : [];
+    }catch{ return []; }
+  }
+  function saveTop(arr){ localStorage.setItem(TOP_KEY, JSON.stringify(arr)); }
+  function renderTop(){
+    const top = loadTop().sort((a,b)=>b.score-a.score).slice(0,3);
+    topTable.innerHTML = '';
+    for(let i=0;i<3;i++){
+      const row = top[i] || {name:'---', score:0};
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="rank">${i+1}.</td>
+        <td class="name">${row.name}</td>
+        <td class="score">${row.score}</td>
+      `;
+      topTable.appendChild(tr);
+    }
+  }
+  renderTop();
+
+  // Stan gry
+  let snake, dir, nextDir, food, score, speed, paused, over, acc;
+
+  function reset(){
+    snake = [{x:15, y:15}];
+    dir = {x:1,y:0}; nextDir = {...dir};
+    spawnFood();
+    score = 0; speed = SPEED_START; paused=false; over=false; acc=0;
+    scoreEl.textContent = score;
+  }
+
+  function spawnFood(){
+    do {
+      food = { x: Math.floor(Math.random()*GRID), y: Math.floor(Math.random()*GRID) };
+    } while (snake.some(s => s.x===food.x && s.y===food.y));
+  }
+
+  // Sterowanie klawiaturą
+  const map = {
+    'ArrowUp':   {x:0,y:-1}, 'KeyW': {x:0,y:-1},
+    'ArrowDown': {x:0,y:1},  'KeyS': {x:0,y:1},
+    'ArrowLeft': {x:-1,y:0}, 'KeyA': {x:-1,y:0},
+    'ArrowRight':{x:1,y:0},  'KeyD': {x:1,y:0},
+  };
+  addEventListener('keydown', (e) => {
+    if (e.code === 'KeyP') { paused = !paused; return; }
+    if (e.code === 'KeyR') { reset(); return; }
+    const nd = map[e.code];
+    if (!nd || over) return;
+    if (nd.x === -dir.x && nd.y === -dir.y) return; // zakaz zawrotki 180°
+    nextDir = nd;
+  });
+
+  // Sterowanie dotykowe
+  function setDirByName(name){
+    const nd = name === 'up' ? {x:0,y:-1}
+      : name === 'down' ? {x:0,y:1}
+      : name === 'left' ? {x:-1,y:0}
+      : name === 'right' ? {x:1,y:0} : null;
+    if (!nd || over) return;
+    if (nd.x === -dir.x && nd.y === -dir.y) return;
+    nextDir = nd;
+  }
+  const pads = document.querySelectorAll('.btnpad[data-dir]');
+  pads.forEach(btn=>{
+    const start = (ev)=>{ ev.preventDefault(); setDirByName(btn.dataset.dir); };
+    btn.addEventListener('touchstart', start, {passive:false});
+    btn.addEventListener('pointerdown', start);
+  });
+  document.getElementById('btnPause').onclick = ()=> paused = !paused;
+  document.getElementById('btnReset').onclick = ()=> reset();
+
+  function update(dt){
+    if (paused || over) return;
+    acc += dt;
+    const step = 1/speed;
+    if (acc < step) return;
+    acc -= step;
+
+    dir = nextDir;
+    const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+    // kolizje
+    if (head.x<0 || head.y<0 || head.x>=GRID || head.y>=GRID) { gameOver(); return; }
+    if (snake.some(s => s.x===head.x && s.y===head.y)) { gameOver(); return; }
+
+    snake.unshift(head);
+
+    // jedzenie
+    if (head.x===food.x && head.y===food.y){
+      score++; scoreEl.textContent = score;
+      if (score > best){ best = score; bestEl.textContent = best; localStorage.setItem(BEST_KEY, best); }
+      speed += SPEED_STEP;
+      spawnFood();
+    } else {
+      snake.pop();
+    }
+  }
+
+  function gameOver(){
+    over = true;
+    maybeAskInitials();
+  }
+
+  function draw(){
+    // tło
+    ctx.fillStyle = '#0e141b';
+    ctx.fillRect(0,0,canvas.width, canvas.height);
+
+    // kratka delikatna
+    ctx.strokeStyle = 'rgba(255,255,255,.04)';
+    ctx.lineWidth = 1;
+    for(let i=1;i<GRID;i++){
+      ctx.beginPath(); ctx.moveTo(i*CELL,0); ctx.lineTo(i*CELL,canvas.height); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0,i*CELL); ctx.lineTo(canvas.width,i*CELL); ctx.stroke();
+    }
+
+    // jedzenie
+    ctx.fillStyle = '#ffd166';
+    roundedRect(food.x*CELL+2, food.y*CELL+2, CELL-4, CELL-4, 4);
+
+    // wąż
+    snake.forEach((s,i) => {
+      const shade = i===0 ? '#7ee787' : 'rgba(126,231,135,.9)';
+      ctx.fillStyle = shade;
+      roundedRect(s.x*CELL+2, s.y*CELL+2, CELL-4, CELL-4, 5);
+    });
+
+    if (paused || over){
+      ctx.fillStyle = 'rgba(0,0,0,.45)';
+      ctx.fillRect(0,0,canvas.width, canvas.height);
+      ctx.fillStyle = '#f5f7fb';
+      ctx.font = '800 40px Inter';
+      ctx.textAlign = 'center';
+      ctx.fillText(over ? 'KONIEC GRY' : 'PAUZA', canvas.width/2, canvas.height/2 - 10);
+      ctx.font = '600 16px Inter';
+      ctx.fillText('R – reset • P – pauza • WASD/strzałki – sterowanie', canvas.width/2, canvas.height/2 + 24);
+    }
+  }
+
+  function roundedRect(x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // pętla gry
+  let last=0;
+  function loop(ts){
+    const dt = (ts - last)/1000;
+    last = ts;
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // responsywny canvas
+  function fit(){
+    const size = Math.min(window.innerWidth*0.94, 900);
+    const inner = Math.min(size, window.innerHeight*0.72);
+    // zachowujemy proporcję 1:1
+    canvas.style.width = inner+'px';
+    canvas.style.height = inner+'px';
+  }
+  addEventListener('resize', fit);
+
+  // Modal inicjałów
+  const modal = document.getElementById('initialsModal');
+  const in1 = document.getElementById('in1');
+  const in2 = document.getElementById('in2');
+  const in3 = document.getElementById('in3');
+  const saveBtn = document.getElementById('saveInitials');
+
+  [in1,in2,in3].forEach((inp,i,arr)=>{
+    inp.addEventListener('input', ()=>{
+      inp.value = (inp.value||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,1);
+      if (inp.value && arr[i+1]) arr[i+1].focus();
+    });
+  });
+
+  function qualifiesTop(sc){
+    const top = loadTop().sort((a,b)=>b.score-a.score);
+    if (top.length < 3) return sc > 0;
+    return sc > top[top.length-1].score;
+  }
+
+  function maybeAskInitials(){
+    if (!qualifiesTop(score)) return;
+    in1.value=''; in2.value=''; in3.value='';
+    modal.classList.add('open');
+    setTimeout(()=>in1.focus(), 50);
+  }
+
+  saveBtn.onclick = ()=>{
+    const name = (in1.value+in2.value+in3.value || '???').padEnd(3,'?').slice(0,3).toUpperCase();
+    const top = loadTop();
+    top.push({name, score});
+    top.sort((a,b)=>b.score-a.score);
+    saveTop(top.slice(0,3));
+    renderTop();
+    modal.classList.remove('open');
+  };
+
+  // Start
+  reset(); fit(); requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
