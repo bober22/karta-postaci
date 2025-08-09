@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Flappy Vird – PTKM</title>
+  <style>
+    :root{ --bg:#0a0b10; --fg:#e6f3ff; --neon1:#00e7ff; --neon2:#ff00e6; --neon3:#00ff95; --glass:rgba(255,255,255,.06); }
+    *{ box-sizing:border-box }
+    html,body{ height:100% }
+    body{ margin:0; background: radial-gradient(120% 120% at 80% 10%, #0d1220 0%, var(--bg) 55%, #07080d 100%); font-family: system-ui, Segoe UI, Roboto, Inter, Arial, sans-serif; color:var(--fg); overflow:hidden; touch-action:none; }
+    canvas{ width:100vw; height:100vh; display:block }
+    .hud{ position:fixed; inset:0; pointer-events:none }
+    .topbar{ position:absolute; inset:16px 16px auto 16px; display:flex; gap:10px; align-items:center; }
+    .btn{ pointer-events:auto; appearance:none; border:0; cursor:pointer; background:linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.04)); color:var(--fg); padding:10px 14px; border-radius:14px; font-weight:700; box-shadow:0 0 0 2px rgba(255,255,255,.06) inset, 0 10px 24px rgba(0,0,0,.25); backdrop-filter: blur(6px) }
+    .home{ pointer-events:auto; text-decoration:none; display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:14px; font-weight:800; color:var(--fg); background:linear-gradient(180deg, rgba(0,231,255,.18), rgba(0,231,255,.06)); box-shadow:0 0 0 2px rgba(0,231,255,.25) inset, 0 10px 24px rgba(0,231,255,.15) }
+    .scoreBox{ pointer-events:none; position:absolute; top:18px; left:50%; transform:translateX(-50%); display:flex; gap:16px; font-weight:800; text-shadow:0 0 12px rgba(0,231,255,.5) }
+    .tag{ opacity:.8; font-weight:600 }
+    .tapHint{ position:absolute; left:50%; top:68%; transform:translate(-50%,-50%); color:#cde9ff; opacity:.9; font-weight:800; letter-spacing:.3px; text-align:center; pointer-events:none; user-select:none; text-shadow:0 0 18px rgba(0,231,255,.5); animation: updown 1.2s ease-in-out infinite }
+    @keyframes updown{ 0%,100%{ transform:translate(-50%,-46%);} 50%{ transform:translate(-50%,-54%);} }
+    .toast{ position:absolute; left:50%; bottom:22px; transform:translateX(-50%); padding:10px 14px; border-radius:12px; background:rgba(0,0,0,.35); color:#dff9ff; font-weight:700; box-shadow:0 0 0 2px rgba(255,255,255,.06) inset; pointer-events:none }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div class="hud" aria-hidden="true">
+    <div class="topbar">
+      <a class="home" href="index.html">⟵ Strona główna</a>
+      <button class="btn" id="pauseBtn" title="Pauza (P)">⏸ Pauza</button>
+      <button class="btn" id="restartBtn" title="Restart (R)">🔄 Restart</button>
+    </div>
+    <div class="scoreBox"><div><span class="tag">Wynik</span>: <span id="score">0</span></div><div>•</div><div><span class="tag">Rekord</span>: <span id="best">0</span></div></div>
+    <div class="tapHint" id="tapHint">TAPNIJ / KLIKNIJ / SPACJA, aby frunąć</div>
+    <div class="toast" id="toast" style="display:none"></div>
+  </div>
+
+  <script>
+  ;(() => {
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const DPR = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
+    let W=0,H=0,U=0; // U – jednostka skalująca w px
+
+    function resize(){
+      canvas.width = Math.floor(window.innerWidth * DPR);
+      canvas.height = Math.floor(window.innerHeight * DPR);
+      ctx.setTransform(DPR,0,0,DPR,0,0);
+      W = window.innerWidth; H = window.innerHeight; U = Math.min(W,H)/100;
+    }
+
+    // HUD
+    const scoreEl = document.getElementById('score');
+    const bestEl  = document.getElementById('best');
+    const tapHint = document.getElementById('tapHint');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const toast = document.getElementById('toast');
+    function showToast(msg, ms=1000){ toast.textContent=msg; toast.style.display='block'; clearTimeout(showToast._t); showToast._t=setTimeout(()=>toast.style.display='none',ms); }
+
+    let state='ready';
+    let score=0, best= +localStorage.getItem('ptkm_flappy_best') || 0; bestEl.textContent=best;
+
+    const bird = { x:0, y:0, r:2.2, vy:0, colorA:'#00e7ff', colorB:'#00ff95' }; // vy w px/s
+    const world = { gravity:1800, flapV:520, speedU:28, pipeW:8, gap:22, spacing:38, jitter:16, ground:12 };
+    let pipes=[]; let pipeTimer=0; // s
+
+    function reset(){
+      state='ready'; score=0; scoreEl.textContent=0; tapHint.style.display='block';
+      bird.x = Math.max(24*U, W*0.25); bird.y = H*0.5; bird.vy=0; pipes=[]; pipeTimer=0;
+    }
+    function addPipe(){
+      const cY = H*0.5 + (Math.random()*2-1)*world.jitter*U;
+      const minTop = 8*U; const maxTop = H - world.ground*U - world.gap*U - 8*U;
+      const topH = Math.max(minTop, Math.min(maxTop, cY - world.gap*U*0.5));
+      pipes.push({x: W + world.pipeW*U, topH, scored:false});
+    }
+
+    function flap(){
+      if(state==='paused') return;
+      if(state==='ready'){ state='playing'; tapHint.style.display='none'; }
+      if(state==='gameover'){ reset(); return; }
+      bird.vy = -world.flapV;
+    }
+
+    // wejścia – pewne na mobile/desktop
+    window.addEventListener('keydown', e=>{
+      if(e.code==='Space'||e.code==='ArrowUp'){ e.preventDefault(); flap(); }
+      if(e.code==='KeyP'){ togglePause(); }
+      if(e.code==='KeyR'){ restart(); }
+    }, {passive:false});
+    ['pointerdown','mousedown','touchstart'].forEach(t=> document.addEventListener(t, ev=>{ ev.preventDefault?.(); flap(); }, {passive:false}));
+    pauseBtn.addEventListener('click', e=>{ e.stopPropagation(); togglePause(); });
+    restartBtn.addEventListener('click', e=>{ e.stopPropagation(); restart(); });
+
+    function togglePause(){ if(state==='playing'){ state='paused'; showToast('Pauza'); } else if(state==='paused'){ state='playing'; showToast('Gramy!'); last=performance.now(); } }
+    function restart(){ reset(); showToast('Restart'); }
+
+    function circleRectColl(cx,cy,r, rx,ry,rw,rh){ const nx=Math.max(rx,Math.min(cx,rx+rw)); const ny=Math.max(ry,Math.min(cy,ry+rh)); const dx=cx-nx, dy=cy-ny; return dx*dx+dy*dy<=r*r; }
+
+    function drawBackground(){ const step=10*U; ctx.save(); ctx.strokeStyle='rgba(0,231,255,.12)'; ctx.lineWidth=1; for(let x=(performance.now()/50)%step; x<W; x+=step){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); } for(let y=(performance.now()/40)%step; y<H; y+=step){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); } ctx.restore(); }
+    function drawBird(){ const r=bird.r*U; const g=ctx.createLinearGradient(bird.x-r,bird.y-r,bird.x+r,bird.y+r); g.addColorStop(0,bird.colorA); g.addColorStop(1,bird.colorB); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(bird.x,bird.y,r,0,Math.PI*2); ctx.fill(); ctx.fillStyle='rgba(255,255,255,.9)'; ctx.beginPath(); ctx.arc(bird.x+r*0.3,bird.y-r*0.25,r*0.28,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(bird.x+r*0.35,bird.y-r*0.25,r*0.12,0,Math.PI*2); ctx.fill(); ctx.strokeStyle='rgba(255,255,255,.6)'; ctx.lineWidth=Math.max(1,r*0.18); ctx.beginPath(); ctx.moveTo(bird.x-r*1.1,bird.y+r*0.1); ctx.lineTo(bird.x-r*1.8,bird.y+r*0.35); ctx.stroke(); ctx.shadowColor=bird.colorA; ctx.shadowBlur=18; }
+    function drawPipes(){ const w=world.pipeW*U; ctx.fillStyle='rgba(0,255,149,.16)'; ctx.strokeStyle='#00ff95'; ctx.lineWidth=2; pipes.forEach(p=>{ ctx.beginPath(); ctx.rect(p.x,0,w,p.topH); ctx.fill(); ctx.stroke(); const by=p.topH+world.gap*U; ctx.beginPath(); ctx.rect(p.x,by,w,H-by-world.ground*U); ctx.fill(); ctx.stroke(); ctx.save(); ctx.shadowColor='#00ff95'; ctx.shadowBlur=12; ctx.strokeStyle='rgba(0,255,149,.65)'; ctx.strokeRect(p.x,0,w,p.topH); ctx.strokeRect(p.x,by,w,H-by-world.ground*U); ctx.restore(); }); }
+    function drawGround(){ const gh=world.ground*U; ctx.fillStyle='rgba(255,255,255,.04)'; ctx.fillRect(0,H-gh,W,gh); ctx.strokeStyle='rgba(0,231,255,.55)'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(0,H-gh+.5); ctx.lineTo(W,H-gh+.5); ctx.stroke(); ctx.fillStyle='rgba(0,231,255,.35)'; const step=8*U; const off=((performance.now()/1000)*(world.speedU*U)*0.5)%step; for(let x=-off; x<W; x+=step){ ctx.fillRect(x,H-gh+gh*0.35,U*.8,U*.8); } }
+    function drawOverlayGameOver(){ ctx.save(); ctx.fillStyle='rgba(0,0,0,.45)'; ctx.fillRect(0,0,W,H); ctx.fillStyle='#e6f3ff'; ctx.textAlign='center'; ctx.font=`700 ${Math.floor(8*U)}px system-ui,Segoe UI,Roboto`; ctx.fillText('KONIEC!', W/2, H*0.38); ctx.font=`600 ${Math.floor(4*U)}px system-ui,Segoe UI,Roboto`; ctx.fillText('Tapnij / kliknij, aby zagrać ponownie', W/2, H*0.46); ctx.restore(); }
+
+    let last=performance.now();
+    function loop(now){
+      requestAnimationFrame(loop);
+      const dt=Math.min(50, now-last); const dtSec=dt/1000; last=now;
+      ctx.clearRect(0,0,W,H); drawBackground();
+      if(state==='playing'){
+        const speedPx=(world.speedU+Math.min(22,score*1.2))*U;
+        bird.vy += world.gravity*dtSec; bird.y += bird.vy*dtSec;
+        for(let i=pipes.length-1;i>=0;i--){
+          pipes[i].x -= speedPx*dtSec; const passed = bird.x - bird.r*U;
+          if(!pipes[i].scored && pipes[i].x + world.pipeW*U < passed){ pipes[i].scored=true; score++; scoreEl.textContent=score; if(score>best){ best=score; bestEl.textContent=best; localStorage.setItem('ptkm_flappy_best',best); } }
+          if(pipes[i].x + world.pipeW*U < -40*U) pipes.splice(i,1);
+        }
+        pipeTimer -= dtSec; if(pipeTimer<=0){ addPipe(); pipeTimer = world.spacing / ( (speedPx)/U ); }
+        const r=bird.r*U; for(const p of pipes){ const w=world.pipeW*U; const by=p.topH+world.gap*U; if(circleRectColl(bird.x,bird.y,r, p.x,0,w,p.topH) || circleRectColl(bird.x,bird.y,r, p.x,by,w,H-by-world.ground*U)){ state='gameover'; tapHint.style.display='none'; showToast('Auu! 😅',900); } }
+        if(bird.y + r > H - world.ground*U || bird.y - r < 0){ state='gameover'; tapHint.style.display='none'; showToast('Ups!'); }
+      }
+      drawPipes(); drawGround(); drawBird();
+      if(state==='ready'){ ctx.save(); ctx.textAlign='center'; ctx.fillStyle='#e6f3ff'; ctx.font=`800 ${Math.floor(7.5*U)}px system-ui,Segoe UI,Roboto`; ctx.fillText('FLAPPY VIRD', W/2, H*0.28); ctx.font=`600 ${Math.floor(3.4*U)}px system-ui,Segoe UI,Roboto`; ctx.fillStyle='rgba(198,244,255,.85)'; ctx.fillText('Tap/klik/Spacja aby zacząć', W/2, H*0.36); ctx.restore(); } else if(state==='paused'){ ctx.save(); ctx.fillStyle='rgba(0,0,0,.45)'; ctx.fillRect(0,0,W,H); ctx.fillStyle='#e6f3ff'; ctx.textAlign='center'; ctx.font=`800 ${Math.floor(6.5*U)}px system-ui,Segoe UI,Roboto`; ctx.fillText('PAUZA', W/2, H*0.45); ctx.restore(); } else if(state==='gameover'){ drawOverlayGameOver(); }
+    }
+
+    window.addEventListener('resize', ()=>{ resize(); reset(); });
+    resize(); reset(); requestAnimationFrame(loop);
+  })();
+  </script>
+</body>
+</html>
