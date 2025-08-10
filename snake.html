@@ -1,421 +1,388 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
-<title>PTKM – Snake (Swipe only)</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@600;800&display=swap" rel="stylesheet">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Snake – sterowanie SWIPE + wibracje i dźwięk</title>
 <style>
-  :root{
-    --bg:#0b0f14; --card:rgba(255,255,255,.08); --text:#f5f7fb; --muted:#b8c0cc;
-    --gold:#ffd166; --accent:#7ee787; --danger:#ff6b6b;
+  :root {
+    --bg: #0b0f14;
+    --panel: #121821;
+    --text: #e7f0ff;
+    --muted: #93a1b3;
+    --accent: #4f9cff;
+    --good: #7ae582;
+    --bad: #ff6b6b;
   }
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0; color:var(--text); font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;
-    background: var(--bg);
-    min-height:100vh; display:grid; place-items:center; padding:16px;
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: radial-gradient(1200px 800px at 40% -10%, #142032 0%, var(--bg) 60%);
+    color: var(--text);
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    overflow: hidden; /* nic nie przewija strony podczas gry */
   }
+  .wrap {
+    height: 100%;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 10px;
+    padding: 12px clamp(10px, 3vw, 24px);
+    touch-action: none; /* ważne na mobilkach – blokuje scroll/zoom gestami */
+  }
+  header, footer, .panel {
+    background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,0));
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 14px;
+    backdrop-filter: blur(6px);
+    padding: 10px 12px;
+  }
+  header {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 10px;
+  }
+  header .score { font-weight: 700; letter-spacing: .4px; }
+  header .controls { display: flex; gap: 10px; align-items: center; }
+  label.toggle {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 10px; border-radius: 10px; cursor: pointer;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.08);
+    user-select: none;
+  }
+  label.toggle input { accent-color: var(--accent); transform: translateY(1px); }
+  .panel {
+    display: grid; place-items: center;
+  }
+  canvas {
+    width: min(92vw, 520px);
+    height: min(92vw, 520px);
+    max-width: 92vmin;
+    max-height: 92vmin;
+    background: #0d131b;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.06);
+    image-rendering: pixelated;
+    touch-action: none; /* krytyczne – żeby palec nie przewijał strony */
+  }
+  .btn {
+    appearance: none;
+    border: 1px solid rgba(255,255,255,.14);
+    background: linear-gradient(180deg, #1a2432, #121a26);
+    color: var(--text);
+    padding: 10px 14px; border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform .05s ease, filter .2s ease, background .2s ease;
+  }
+  .btn:hover { filter: brightness(1.08); }
+  .btn:active { transform: translateY(1px); }
+  .btn.accent { border-color: rgba(79,156,255,.6); box-shadow: 0 0 0 3px rgba(79,156,255,.16) inset; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .hint { color: var(--muted); font-size: .92rem; }
+  footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+  .status {
+    font-weight: 700; letter-spacing: .3px;
+    padding: 6px 10px; border-radius: 10px;
+  }
+  .status.ok { color: var(--good); background: rgba(122,229,130,.12); border: 1px solid rgba(122,229,130,.32); }
+  .status.err { color: var(--bad); background: rgba(255,107,107,.12); border: 1px solid rgba(255,107,107,.32); }
 
-  .wrap{width:min(94vw,900px);}
-  header{display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:10px}
-  a.btn,button.btn{
-    appearance:none; border:none; background:var(--card); color:var(--text);
-    padding:.6rem .9rem; border-radius:12px; text-decoration:none; font-weight:800; cursor:pointer;
-    box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 6px 18px rgba(0,0,0,.35);
+  @media (min-width: 920px) {
+    canvas { width: 520px; height: 520px; }
   }
-
-  .shell{display:grid; gap:12px;}
-  .hud{
-    display:grid; gap:12px;
-    grid-template-columns: 1.2fr .8fr;
-  }
-  @media (max-width: 720px){
-    .hud{ grid-template-columns: 1fr; }
-  }
-
-  .panel{
-    padding:12px 14px; border-radius:14px; background:var(--card);
-    box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 18px 40px rgba(0,0,0,.35);
-  }
-  .stats{display:flex; flex-wrap:wrap; gap:12px; align-items:center}
-  .stat{display:flex; gap:8px; align-items:center}
-  .stat .v{font-weight:800}
-
-  .board{
-    background:#0e141b; border-radius:16px; overflow:hidden; display:grid; place-items:center;
-    box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 24px 60px rgba(0,0,0,.5);
-    position:relative;
-    /* zapobiega overscrollowi na iOS/Android kiedy gest zaczyna się na planszy */
-    overscroll-behavior: contain;
-  }
-  canvas{
-    width:100%; max-width:940px; aspect-ratio:1/1; display:block; image-rendering: pixelated;
-    border-radius:18px;
-    background: radial-gradient(120% 120% at 50% 0%, #0f1720 0%, #0b0f14 55%, #0b0f14 100%);
-    /* kluczowe: wyłącz reakcje przeglądarki na gesty (scroll/zoom) w obszarze gry */
-    touch-action: none;
-  }
-
-  .help{margin-top:10px; color:var(--muted); text-align:center}
-
-  /* TOP 3 */
-  .top3 h3{margin:0 0 6px 0; font-size:14px; letter-spacing:.5px; color:var(--gold)}
-  .table{width:100%; border-collapse:collapse; font-size:14px}
-  .table td{padding:6px 4px}
-  .table tr:not(:last-child) td{border-bottom:1px solid rgba(255,255,255,.07)}
-  .table .rank{opacity:.8; width:2ch}
-  .table .name{font-weight:800}
-  .table .score{text-align:right}
-
-  /* Overlay końca gry */
-  .overlay{
-    position:absolute; inset:0; display:none; place-items:center; background:rgba(0,0,0,.55);
-  }
-  .overlay.open{display:grid}
-  .box{
-    background:#10161e; border-radius:16px; padding:18px 18px 14px;
-    box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 24px 60px rgba(0,0,0,.6);
-    text-align:center; width:min(90vw,420px);
-  }
-  .box h2{margin:0 0 10px 0}
-  .box p{margin:0 0 14px 0; color:var(--muted)}
-
-  /* Modal inicjałów */
-  .modal{
-    position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.5);
-    padding:20px; z-index:10;
-  }
-  .modal.open{display:grid}
-  .dialog{
-    width:min(92vw,420px); background:#10161e; border-radius:16px; padding:18px;
-    box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 24px 60px rgba(0,0,0,.6);
-  }
-  .dialog h2{margin:0 0 8px 0}
-  .dialog p{margin:0 0 12px 0; color:var(--muted)}
-  .initials{
-    display:flex; gap:8px; justify-content:center; margin:12px 0 16px;
-  }
-  .initials input{
-    width:64px; height:64px; text-transform:uppercase; text-align:center; font-size:28px; font-weight:800;
-    border:none; outline:none; color:var(--text); background:rgba(255,255,255,.08); border-radius:12px;
-    box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);
-  }
-  .dialog .row{display:flex; gap:8px; justify-content:flex-end}
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <a class="btn" href="index.html">← PTKM</a>
-      <div style="opacity:.7;font-weight:800">Snake – sterowanie: SWIPE</div>
-    </header>
-
-    <div class="shell">
-      <div class="hud">
-        <div class="panel">
-          <div class="stats">
-            <div class="stat">Wynik: <span class="v" id="score">0</span></div>
-            <div class="stat">Rekord: <span class="v" id="best">0</span></div>
-            <button class="btn" id="btnPause">Pauza</button>
-            <button class="btn" id="btnReset">Reset</button>
-          </div>
-        </div>
-        <div class="panel top3">
-          <h3>TOP 3 (lokalnie)</h3>
-          <table class="table" id="topTable">
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="board" id="board">
-        <canvas id="game" width="600" height="600" aria-label="Plansza gry Snake"></canvas>
-
-        <!-- Overlay końca gry -->
-        <div class="overlay" id="gameOver">
-          <div class="box">
-            <h2>KONIEC GRY</h2>
-            <p>Przeciągnij palcem, by grać — lub kliknij przycisk poniżej.</p>
-            <button class="btn" id="btnPlayAgain">Zagraj ponownie</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="help">Siatka 30×30. Zbieraj jedzenie i nie ugryź ogona ani ściany. Sterowanie tylko <strong>swipe</strong> na planszy.</div>
+<div class="wrap" id="wrap">
+  <header>
+    <div class="score">Wynik: <span id="score">0</span></div>
+    <div class="controls">
+      <label class="toggle" title="Włącz/wyłącz dźwięk">
+        <input type="checkbox" id="soundToggle" checked />
+        Dźwięk
+      </label>
+      <label class="toggle" title="Włącz/wyłącz wibracje">
+        <input type="checkbox" id="vibrationToggle" checked />
+        Wibracje
+      </label>
     </div>
+    <div class="row">
+      <button id="startBtn" class="btn accent">Start</button>
+      <button id="restartBtn" class="btn" style="display:none">Restart</button>
+    </div>
+  </header>
+
+  <div class="panel">
+    <canvas id="game" width="400" height="400" aria-label="Plansza gry Snake"></canvas>
   </div>
 
-  <!-- Modal inicjałów -->
-  <div class="modal" id="initialsModal" role="dialog" aria-modal="true">
-    <div class="dialog">
-      <h2>Nowy rekord!</h2>
-      <p>Wpisałeś się do TOP 3. Podaj swoje 3 litery:</p>
-      <div class="initials">
-        <input id="in1" maxlength="1" autocomplete="off" autocapitalize="characters" inputmode="latin" />
-        <input id="in2" maxlength="1" autocomplete="off" autocapitalize="characters" inputmode="latin" />
-        <input id="in3" maxlength="1" autocomplete="off" autocapitalize="characters" inputmode="latin" />
-      </div>
-      <div class="row">
-        <button class="btn" id="saveInitials">Zapisz</button>
-      </div>
-    </div>
-  </div>
+  <footer>
+    <div class="hint">Sterowanie: <strong>SWIPE</strong> (palcem) lub klawisze strzałek. Brak klikania.</div>
+    <div id="status" class="status ok" aria-live="polite">Gotowy.</div>
+  </footer>
+</div>
 
 <script>
 (() => {
-  // ===== DOM
+  // --- USTAWIENIA GRY ---
   const canvas = document.getElementById('game');
-  const board  = document.getElementById('board');
-  const ctx = canvas.getContext('2d', { alpha: false });
+  const ctx = canvas.getContext('2d');
+  const TILE = 20;                 // wielkość kafelka
+  const GRID = canvas.width / TILE; // 20x20
+  const SPEED_MS = 110;            // interwał ruchu
+  const WRAP_BOUNDS = false;       // jeśli true – ściany zawijają
+
+  // --- UI ---
   const scoreEl = document.getElementById('score');
-  const bestEl  = document.getElementById('best');
-  const topTable = document.querySelector('#topTable tbody');
-  const overlay = document.getElementById('gameOver');
+  const startBtn = document.getElementById('startBtn');
+  const restartBtn = document.getElementById('restartBtn');
+  const statusEl = document.getElementById('status');
+  const soundToggle = document.getElementById('soundToggle');
+  const vibrationToggle = document.getElementById('vibrationToggle');
+  const wrap = document.getElementById('wrap');
 
-  // ===== Stałe
-  const GRID = 30;                 // 30x30
-  const CELL = canvas.width / GRID; // 600/30 = 20px
-  const SPEED_START = 8;           // FPS
-  const SPEED_STEP = .35;
-
-  // Storage keys
-  const BEST_KEY = 'ptkm_snake_best';
-  const TOP_KEY  = 'ptkm_snake_top3'; // [{name,score}]
-
-  // ===== Rekordy
-  let best = +localStorage.getItem(BEST_KEY) || 0;
-  bestEl.textContent = best;
-
-  function loadTop(){
-    try{
-      const raw = localStorage.getItem(TOP_KEY);
-      return raw ? JSON.parse(raw) : [];
-    }catch{ return []; }
+  // --- AUDIO (Web Audio) ---
+  let audioCtx = null;
+  let audioEnabled = true;
+  function ensureAudio() {
+    if (audioCtx || !audioEnabled) return;
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch {}
   }
-  function saveTop(arr){ localStorage.setItem(TOP_KEY, JSON.stringify(arr)); }
-  function renderTop(){
-    const top = loadTop().sort((a,b)=>b.score-a.score).slice(0,3);
-    topTable.innerHTML = '';
-    for(let i=0;i<3;i++){
-      const row = top[i] || {name:'---', score:0};
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td class="rank">${i+1}.</td>
-        <td class="name">${row.name}</td>
-        <td class="score">${row.score}</td>
-      `;
-      topTable.appendChild(tr);
+  function beep({ freq=880, dur=0.08, type='sine', gain=0.06 } = {}) {
+    if (!audioEnabled) return;
+    if (!audioCtx) return;
+    const t0 = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    g.gain.setValueAtTime(0, t0);
+    g.gain.linearRampToValueAtTime(gain, t0 + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(g).connect(audioCtx.destination);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.02);
+  }
+
+  // --- WIBRACJE ---
+  let vibrationEnabled = true;
+  function vibe(pattern=30) {
+    if (!vibrationEnabled) return;
+    if ('vibrate' in navigator) {
+      navigator.vibrate(pattern);
     }
   }
-  renderTop();
 
-  // ===== Stan gry
-  let snake, dir, nextDir, food, score, speed, paused, over, acc;
-
-  function reset(){
-    snake = [{x:15, y:15}];
-    dir = {x:1,y:0}; nextDir = {...dir};
-    spawnFood();
-    score = 0; speed = SPEED_START; paused=false; over=false; acc=0;
-    overlay.classList.remove('open');
+  // --- STAN GRY ---
+  let snake, dir, nextDir, food, timer, score, running, gameOver;
+  function reset() {
+    snake = [{x:10, y:10}];
+    dir = {x:1, y:0};
+    nextDir = {x:1, y:0};
+    food = spawnFood(snake);
+    score = 0;
+    running = false;
+    gameOver = false;
     scoreEl.textContent = score;
+    draw();
+    statusOK('Gotowy.');
+    restartBtn.style.display = 'none';
   }
 
-  function spawnFood(){
-    do {
-      food = { x: Math.floor(Math.random()*GRID), y: Math.floor(Math.random()*GRID) };
-    } while (snake.some(s => s.x===food.x && s.y===food.y));
-  }
-
-  // ===== Sterowanie: WYŁĄCZNIE SWIPE =====
-  // Zapobiegamy przewijaniu gdy palec jest na canvasku.
-  canvas.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive:false });
-
-  let touchActive = false;
-  let startX = 0, startY = 0;
-  const SWIPE_MIN = 18; // px – czułość
-
-  canvas.addEventListener('touchstart', (e) => {
-    if (e.touches.length !== 1) return;
-    e.preventDefault();
-    touchActive = true;
-    const t = e.touches[0];
-    startX = t.clientX;
-    startY = t.clientY;
-  }, { passive:false });
-
-  canvas.addEventListener('touchend', (e) => {
-    touchActive = false;
-  });
-
-  canvas.addEventListener('touchcancel', () => { touchActive=false; });
-
-  canvas.addEventListener('touchmove', (e) => {
-    if (!touchActive || over || paused) return;
-    const t = e.touches[0];
-    const dx = t.clientX - startX;
-    const dy = t.clientY - startY;
-    if (Math.abs(dx) < SWIPE_MIN && Math.abs(dy) < SWIPE_MIN) return;
-
-    // wybór kierunku po większej składowej
-    const nd = Math.abs(dx) > Math.abs(dy)
-      ? (dx > 0 ? {x:1,y:0} : {x:-1,y:0})
-      : (dy > 0 ? {x:0,y:1} : {x:0,y:-1});
-
-    // zakaz zawrotki 180°
-    if (!(nd.x === -dir.x && nd.y === -dir.y)) {
-      nextDir = nd;
-      // zablokuj spam wieloma zmianami w jednym przeciągnięciu:
-      touchActive = false;
+  function spawnFood(body) {
+    while (true) {
+      const f = { x: (Math.random()*GRID|0), y: (Math.random()*GRID|0) };
+      if (!body.some(s => s.x===f.x && s.y===f.y)) return f;
     }
-  }, { passive:false });
+  }
 
-  // ===== Przyciski
-  document.getElementById('btnPause').onclick = ()=> paused = !paused;
-  document.getElementById('btnReset').onclick = ()=> reset();
-  document.getElementById('btnPlayAgain').onclick = ()=> reset();
+  function start() {
+    if (running) return;
+    if (gameOver) reset();
+    running = true;
+    statusOK('Gramy!');
+    clearInterval(timer);
+    timer = setInterval(tick, SPEED_MS);
+  }
 
-  // ===== Logika gry
-  function update(dt){
-    if (paused || over) return;
-    acc += dt;
-    const step = 1/speed;
-    if (acc < step) return;
-    acc -= step;
+  function end() {
+    running = false;
+    gameOver = true;
+    clearInterval(timer);
+    statusERR('Koniec gry! Wynik: ' + score);
+    restartBtn.style.display = 'inline-block';
+    // efekt przegranej
+    vibe([80, 60, 120]);
+    ensureAudio(); beep({freq:220, dur:.18, type:'square', gain:.05});
+  }
 
+  // --- LOGIKA ---
+  function tick() {
+    // przenieś kierunek ustawiony przez gracza
     dir = nextDir;
-    const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
 
-    // kolizje
-    if (head.x<0 || head.y<0 || head.x>=GRID || head.y>=GRID) { gameOver(); return; }
-    if (snake.some(s => s.x===head.x && s.y===head.y)) { gameOver(); return; }
+    // nowa głowa
+    let head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+    if (WRAP_BOUNDS) {
+      head.x = (head.x + GRID) % GRID;
+      head.y = (head.y + GRID) % GRID;
+    }
+
+    // kolizja ze ścianą
+    if (!WRAP_BOUNDS && (head.x < 0 || head.x >= GRID || head.y < 0 || head.y >= GRID)) {
+      return end();
+    }
+    // kolizja z ciałem
+    if (snake.some(s => s.x === head.x && s.y === head.y)) {
+      return end();
+    }
 
     snake.unshift(head);
 
     // jedzenie
-    if (head.x===food.x && head.y===food.y){
-      score++; scoreEl.textContent = score;
-      if (score > best){ best = score; bestEl.textContent = best; localStorage.setItem(BEST_KEY, best); }
-      speed += SPEED_STEP;
-      spawnFood();
+    if (head.x === food.x && head.y === food.y) {
+      score++;
+      scoreEl.textContent = score;
+      food = spawnFood(snake);
+      // feedback: krótki beep + wibracja
+      ensureAudio(); beep({freq:920, dur:.06, type:'triangle', gain: .06});
+      vibe([15, 30, 15]);
     } else {
       snake.pop();
     }
+
+    draw();
   }
 
-  function gameOver(){
-    over = true;
-    overlay.classList.add('open');
-    maybeAskInitials();
-  }
-
-  function draw(){
-    // tło
-    ctx.fillStyle = '#0e141b';
-    ctx.fillRect(0,0,canvas.width, canvas.height);
-
-    // kratka delikatna
-    ctx.strokeStyle = 'rgba(255,255,255,.04)';
+  // --- RYSOWANIE ---
+  function drawGrid() {
+    ctx.clearRect(0,0,canvas.width, canvas.height);
+    // delikatna siatka
+    ctx.strokeStyle = 'rgba(255,255,255,.05)';
     ctx.lineWidth = 1;
-    for(let i=1;i<GRID;i++){
-      ctx.beginPath(); ctx.moveTo(i*CELL,0); ctx.lineTo(i*CELL,canvas.height); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(0,i*CELL); ctx.lineTo(canvas.width,i*CELL); ctx.stroke();
-    }
-
-    // jedzenie
-    ctx.fillStyle = '#ffd166';
-    roundedRect(food.x*CELL+2, food.y*CELL+2, CELL-4, CELL-4, 4);
-
-    // wąż
-    snake.forEach((s,i) => {
-      ctx.fillStyle = i===0 ? '#7ee787' : 'rgba(126,231,135,.9)';
-      roundedRect(s.x*CELL+2, s.y*CELL+2, CELL-4, CELL-4, 5);
-    });
-
-    if (paused){
-      ctx.fillStyle = 'rgba(0,0,0,.45)';
-      ctx.fillRect(0,0,canvas.width, canvas.height);
-      ctx.fillStyle = '#f5f7fb';
-      ctx.font = '800 40px Inter';
-      ctx.textAlign = 'center';
-      ctx.fillText('PAUZA', canvas.width/2, canvas.height/2 - 10);
-      ctx.font = '600 16px Inter';
-      ctx.fillText('Dotknij przycisk „Pauza” ponownie, by wznowić', canvas.width/2, canvas.height/2 + 24);
+    for (let i=1; i<GRID; i++) {
+      ctx.beginPath();
+      ctx.moveTo(i*TILE+.5, 0); ctx.lineTo(i*TILE+.5, canvas.height); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, i*TILE+.5); ctx.lineTo(canvas.width, i*TILE+.5); ctx.stroke();
     }
   }
 
-  function roundedRect(x,y,w,h,r){
+  function drawSnake() {
+    for (let i=0; i<snake.length; i++) {
+      const s = snake[i];
+      const isHead = i === 0;
+      ctx.fillStyle = isHead ? '#4f9cff' : '#7aa6ff';
+      ctx.fillRect(s.x*TILE+2, s.y*TILE+2, TILE-4, TILE-4);
+      if (isHead) {
+        ctx.fillStyle = 'rgba(255,255,255,.7)';
+        ctx.fillRect(s.x*TILE+7, s.y*TILE+6, 3, 3);
+        ctx.fillRect(s.x*TILE+TILE-10, s.y*TILE+6, 3, 3);
+      }
+    }
+  }
+
+  function drawFood() {
+    ctx.fillStyle = '#7ae582';
     ctx.beginPath();
-    ctx.moveTo(x+r,y);
-    ctx.arcTo(x+w,y,x+w,y+h,r);
-    ctx.arcTo(x+w,y+h,x,y+h,r);
-    ctx.arcTo(x,y+h,x,y,r);
-    ctx.arcTo(x,y,x+w,y,r);
-    ctx.closePath();
+    const cx = food.x*TILE + TILE/2;
+    const cy = food.y*TILE + TILE/2;
+    ctx.arc(cx, cy, TILE*0.35, 0, Math.PI*2);
     ctx.fill();
   }
 
-  // pętla
-  let last=0;
-  function loop(ts){
-    const dt = (ts - last)/1000;
-    last = ts;
-    update(dt);
-    draw();
-    requestAnimationFrame(loop);
+  function draw() {
+    drawGrid();
+    drawFood();
+    drawSnake();
   }
 
-  // responsywny canvas (kwadrat)
-  function fit(){
-    const size = Math.min(window.innerWidth*0.94, 900);
-    const inner = Math.min(size, window.innerHeight*0.72);
-    canvas.style.width = inner+'px';
-    canvas.style.height = inner+'px';
+  // --- STEROWANIE: SWIPE (bez klikania) + klawisze ---
+  let touchStart = null;
+  const SWIPE_MIN = 20; // px
+  function onTouchStart(e) {
+    ensureAudio(); // inicjalizacja po pierwszym geście
+    if (e.touches && e.touches.length > 1) return; // ignoruj multitoucha
+    const t = e.touches ? e.touches[0] : e;
+    touchStart = { x: t.clientX, y: t.clientY };
+    e.preventDefault();
   }
-  addEventListener('resize', fit);
+  function onTouchMove(e) {
+    // zapobiegaj przewijaniu podczas prowadzenia palcem
+    e.preventDefault();
+  }
+  function onTouchEnd(e) {
+    if (!touchStart) return;
+    const t = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : (e.touches ? e.touches[0] : null);
+    const endX = t ? t.clientX : (e.clientX ?? touchStart.x);
+    const endY = t ? t.clientY : (e.clientY ?? touchStart.y);
+    const dx = endX - touchStart.x;
+    const dy = endY - touchStart.y;
+    const ax = Math.abs(dx), ay = Math.abs(dy);
+    touchStart = null;
 
-  // ===== Modal inicjałów
-  const modal = document.getElementById('initialsModal');
-  const in1 = document.getElementById('in1');
-  const in2 = document.getElementById('in2');
-  const in3 = document.getElementById('in3');
-  const saveBtn = document.getElementById('saveInitials');
+    if (Math.max(ax, ay) < SWIPE_MIN) return; // za krótki ruch
 
-  [in1,in2,in3].forEach((inp,i,arr)=>{
-    inp.addEventListener('input', ()=>{
-      inp.value = (inp.value||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,1);
-      if (inp.value && arr[i+1]) arr[i+1].focus();
-    });
+    // Horyzontalny vs pionowy
+    if (ax > ay) {
+      // prawo/lewo
+      if (dx > 0 && dir.x !== -1) nextDir = {x:1, y:0};
+      else if (dx < 0 && dir.x !== 1) nextDir = {x:-1, y:0};
+    } else {
+      // dół/góra
+      if (dy > 0 && dir.y !== -1) nextDir = {x:0, y:1};
+      else if (dy < 0 && dir.y !== 1) nextDir = {x:0, y:-1};
+    }
+  }
+
+  // Klawiatura (opcjonalnie – desktop)
+  function onKey(e) {
+    const k = e.key;
+    if (k === 'ArrowRight' && dir.x !== -1) nextDir = {x:1, y:0};
+    else if (k === 'ArrowLeft'  && dir.x !== 1) nextDir = {x:-1, y:0};
+    else if (k === 'ArrowUp'    && dir.y !== 1) nextDir = {x:0, y:-1};
+    else if (k === 'ArrowDown'  && dir.y !== -1) nextDir = {x:0, y:1};
+    else if (k === ' ' || k === 'Enter') start();
+  }
+
+  // --- STATUS UI ---
+  function statusOK(msg)  { statusEl.className = 'status ok';  statusEl.textContent = msg; }
+  function statusERR(msg) { statusEl.className = 'status err'; statusEl.textContent = msg; }
+
+  // --- ZDARZENIA UI ---
+  startBtn.addEventListener('click', () => { ensureAudio(); start(); });
+  restartBtn.addEventListener('click', () => { ensureAudio(); reset(); start(); });
+
+  soundToggle.addEventListener('change', () => {
+    audioEnabled = soundToggle.checked;
+    if (audioEnabled) ensureAudio();
+  });
+  vibrationToggle.addEventListener('change', () => {
+    vibrationEnabled = vibrationToggle.checked;
   });
 
-  function qualifiesTop(sc){
-    const top = loadTop().sort((a,b)=>b.score-a.score);
-    if (top.length < 3) return sc > 0;
-    return sc > top[top.length-1].score;
-  }
+  // Dotyk – używamy passive:false, żeby móc preventDefault na move
+  const touchOpts = { passive: false };
+  canvas.addEventListener('touchstart', onTouchStart, touchOpts);
+  canvas.addEventListener('touchmove',  onTouchMove,  touchOpts);
+  canvas.addEventListener('touchend',   onTouchEnd,   touchOpts);
+  // Na wszelki wypadek blokujemy gesty również na wrapperze
+  wrap.addEventListener('touchmove', (e)=>e.preventDefault(), touchOpts);
 
-  function maybeAskInitials(){
-    if (!qualifiesTop(score)) return;
-    in1.value=''; in2.value=''; in3.value='';
-    modal.classList.add('open');
-    setTimeout(()=>in1.focus(), 50);
-  }
+  // Mysz NIE steruje (żeby nie było przypadkowych klików),
+  // ale zostawiamy możliwość złapania focusu klawiaturą.
+  canvas.addEventListener('mousedown', (e)=> e.preventDefault());
 
-  saveBtn.onclick = ()=>{
-    const name = (in1.value+in2.value+in3.value || '???').padEnd(3,'?').slice(0,3).toUpperCase();
-    const top = loadTop();
-    top.push({name, score});
-    top.sort((a,b)=>b.score-a.score);
-    saveTop(top.slice(0,3));
-    renderTop();
-    modal.classList.remove('open');
-  };
+  window.addEventListener('keydown', onKey);
 
-  // ===== Start
-  reset(); fit(); requestAnimationFrame(loop);
+  // Start stanu początkowego
+  reset();
+
 })();
 </script>
 </body>
