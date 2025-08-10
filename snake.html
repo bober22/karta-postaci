@@ -8,8 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@600;800&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#0b0f14; --card:rgba(255,255,255,.08); --text:#f5f7fb; --muted:#b8c0cc; --gold:#ffd166;
-    --accent:#7ee787; --danger:#ff6b6b;
+    --bg:#0b0f14; --card:rgba(255,255,255,.08); --text:#f5f7fb; --muted:#b8c0cc; --gold:#ffd166; --accent:#7ee787;
   }
   *{box-sizing:border-box}
   html,body{height:100%}
@@ -17,8 +16,8 @@
     margin:0; color:var(--text); font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;
     background: var(--bg) url("arcade.png") center/cover fixed no-repeat;
     min-height:100dvh; display:flex; align-items:flex-start; justify-content:center; padding:16px;
-    overscroll-behavior-y: none;   /* 🔒 brak „sprężynowania/odświeżania” */
-    touch-action: manipulation;    /* 🔒 ogranicz gesty na całej stronie */
+    overscroll-behavior-y: none;         /* brak „sprężynowania” */
+    touch-action: manipulation;          /* mniej globalnych gestów */
   }
 
   .wrap{width:min(94vw,900px); margin:0 auto;}
@@ -46,25 +45,11 @@
 
   canvas{
     width:100%; max-width:940px; border-radius:18px;
-    background:url("neon.png") center/cover no-repeat;
+    background:url("neon.png") center/cover no-repeat, #0e141b;
     box-shadow:0 0 0 2px rgba(255,255,255,.03) inset, 0 0 60px #000;
     display:block; image-rendering:pixelated;
-    touch-action:none;          /* 🔒 na planszy gesty nie przewijają */
+    touch-action:none;                    /* na planszy nie przewijamy */
   }
-
-  /* Overlay „game over” z przyciskiem Restart */
-  .overlay{
-    position:absolute; inset:0; display:none; place-items:center; background:rgba(0,0,0,.45);
-  }
-  .overlay.open{ display:grid; }
-  .go-card{
-    background:#10161e; padding:18px; border-radius:16px;
-    box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 24px 60px rgba(0,0,0,.6);
-    text-align:center; min-width:260px;
-  }
-  .go-title{font-weight:800; font-size:28px; margin:0 0 8px}
-  .go-sub{color:var(--muted); margin:0 0 14px}
-  .btn.primary{background:rgba(126,231,135,.22)}
 
   .help{margin-top:10px; color:var(--muted); text-align:center}
 
@@ -77,6 +62,15 @@
   .table .name{font-weight:800}
   .table .score{text-align:right}
 
+  /* Overlay „game over” z Restartem */
+  .overlay{position:absolute; inset:0; display:none; place-items:center; background:rgba(0,0,0,.45)}
+  .overlay.open{display:grid}
+  .go-card{background:#10161e; padding:18px; border-radius:16px;
+           box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 24px 60px rgba(0,0,0,.6); text-align:center; min-width:260px}
+  .go-title{font-weight:800; font-size:28px; margin:0 0 8px}
+  .go-sub{color:var(--muted); margin:0 0 14px}
+  .btn.primary{background:rgba(126,231,135,.22)}
+  
   /* Modal inicjałów (TOP3) */
   .modal{position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.5); padding:20px; z-index:10}
   .modal.open{display:grid}
@@ -105,7 +99,7 @@
           <div class="stats">
             <div class="stat">Wynik: <span class="v" id="score">0</span></div>
             <div class="stat">Rekord: <span class="v" id="best">0</span></div>
-            <div class="stat">Sterowanie: WASD / ←↑→↓ lub dotyk</div>
+            <div class="stat">Sterowanie: WASD / ←↑→↓ lub <strong>swipe</strong></div>
           </div>
         </div>
         <div class="panel top3">
@@ -149,7 +143,7 @@
 
 <script>
 (() => {
-  // --- DOM
+  // --------- DOM
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
   const scoreEl = document.getElementById('score');
@@ -159,13 +153,13 @@
   const finalScoreEl = document.getElementById('finalScore');
   const btnRestart = document.getElementById('btnRestart');
 
-  // --- Stałe gry
+  // --------- Stałe
   const GRID = 30;
-  const CELL = canvas.width / GRID;
-  const SPEED_START = 8;
+  const CELL = canvas.width / GRID;   // 600/30 = 20
+  const SPEED_START = 8;              // FPS ruchu
   const SPEED_STEP = .35;
 
-  // --- Storage
+  // --------- Storage
   const BEST_KEY = 'ptkm_snake_best';
   const TOP_KEY  = 'ptkm_snake_top3';
 
@@ -186,7 +180,7 @@
   }
   renderTop();
 
-  // --- Stan
+  // --------- Stan gry
   let snake, dir, nextDir, food, score, speed, paused, over, acc;
 
   function reset(){
@@ -204,7 +198,7 @@
     while (snake?.some(s => s.x===food.x && s.y===food.y));
   }
 
-  // --- Klawiatura
+  // --------- Klawiatura
   const map = {
     'ArrowUp':{x:0,y:-1}, 'KeyW':{x:0,y:-1},
     'ArrowDown':{x:0,y:1}, 'KeyS':{x:0,y:1},
@@ -220,59 +214,60 @@
     nextDir = nd;
   });
 
-  // --- Dotyk: tap/swipe + blokada scrolla
-  function setDirByTap(clientX, clientY){
-    if (over) return;
-    const r = canvas.getBoundingClientRect();
-    const x = (clientX - r.left) * (canvas.width  / r.width);
-    const y = (clientY - r.top ) * (canvas.height / r.height);
-    const hx = (snake[0].x + .5) * (canvas.width/GRID);
-    const hy = (snake[0].y + .5) * (canvas.height/GRID);
-    const dx = x - hx, dy = y - hy;
-    const nd = Math.abs(dx) > Math.abs(dy) ? (dx>0?{x:1,y:0}:{x:-1,y:0}) : (dy>0?{x:0,y:1}:{x:0,y:-1});
-    if (nd.x===-dir.x && nd.y===-dir.y) return;
-    nextDir = nd;
-  }
-  canvas.addEventListener('pointerdown', e => { e.preventDefault(); setDirByTap(e.clientX, e.clientY); }, {passive:false});
-
+  // --------- DOTYK: TYLKO SWIPE (tap wyłączony) + blok przewijania
   let swipeStart=null;
+  function lockScroll(lock){
+    document.body.style.overflow = lock ? 'hidden' : '';
+  }
   canvas.addEventListener('touchstart', e=>{
     e.preventDefault();
+    lockScroll(true);
     if (!e.touches[0]) return;
     swipeStart = {x:e.touches[0].clientX, y:e.touches[0].clientY, t:performance.now()};
   }, {passive:false});
   canvas.addEventListener('touchmove', e=>{ e.preventDefault(); }, {passive:false});
   canvas.addEventListener('touchend', e=>{
     e.preventDefault();
+    lockScroll(false);
     if (!swipeStart) return;
     const t = performance.now()-swipeStart.t;
     const touch = e.changedTouches[0];
     const dx = touch.clientX-swipeStart.x, dy = touch.clientY-swipeStart.y;
-    const THRESH=24;
-    if (Math.max(Math.abs(dx),Math.abs(dy))>THRESH && t<400){
+    const THRESH=24; // minimalna długość gestu
+    if (Math.max(Math.abs(dx),Math.abs(dy))>THRESH && t<500){
       const nd = Math.abs(dx)>Math.abs(dy) ? (dx>0?{x:1,y:0}:{x:-1,y:0}) : (dy>0?{x:0,y:1}:{x:0,y:-1});
       if (!(nd.x===-dir.x && nd.y===-dir.y)) nextDir=nd;
-    } else setDirByTap(touch.clientX,touch.clientY);
+    }
     swipeStart=null;
   }, {passive:false});
+  canvas.addEventListener('touchcancel', ()=>{ lockScroll(false); swipeStart=null; });
 
-  // --- Update / Draw
+  // --------- Logika
   function update(dt){
     if (paused || over) return;
-    acc += dt; const step = 1/speed;
-    if (acc < step) return; acc -= step;
+    acc += dt;
+    const step = 1/speed;
+    if (acc < step) return;
+    acc -= step;
 
     dir = nextDir;
     const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+    // kolizje
     if (head.x<0 || head.y<0 || head.x>=GRID || head.y>=GRID) { gameOver(); return; }
     if (snake.some(s => s.x===head.x && s.y===head.y)) { gameOver(); return; }
+
     snake.unshift(head);
 
+    // jedzenie
     if (head.x===food.x && head.y===food.y){
       score++; scoreEl.textContent = score;
       if (score > best){ best = score; bestEl.textContent = best; localStorage.setItem(BEST_KEY, best); }
-      speed += SPEED_STEP; spawnFood();
-    } else snake.pop();
+      speed += SPEED_STEP;
+      spawnFood();
+    } else {
+      snake.pop();
+    }
   }
 
   function gameOver(){
@@ -284,14 +279,38 @@
   }
 
   function draw(){
-    ctx.fillStyle='#0e141b'; ctx.fillRect(0,0,canvas.width,canvas.height);
-    ctx.strokeStyle='rgba(255,255,255,.04)';
+    // tło
+    ctx.fillStyle = '#0e141b';
+    ctx.fillRect(0,0,canvas.width, canvas.height);
+
+    // delikatna siatka
+    ctx.strokeStyle = 'rgba(255,255,255,.04)';
+    ctx.lineWidth = 1;
     for(let i=1;i<GRID;i++){
       ctx.beginPath(); ctx.moveTo(i*CELL,0); ctx.lineTo(i*CELL,canvas.height); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(0,i*CELL); ctx.lineTo(canvas.width,i*CELL); ctx.stroke();
     }
-    ctx.fillStyle='#ffd166'; roundedRect(food.x*CELL+2,food.y*CELL+2,CELL-4,CELL-4,4);
-    snake.forEach((s,i)=>{ ctx.fillStyle=i===0?'#7ee787':'rgba(126,231,135,.9)'; roundedRect(s.x*CELL+2,s.y*CELL+2,CELL-4,CELL-4,5); });
+
+    // jedzenie
+    ctx.fillStyle = '#ffd166';
+    roundedRect(food.x*CELL+2, food.y*CELL+2, CELL-4, CELL-4, 4);
+
+    // wąż
+    snake.forEach((s,i) => {
+      ctx.fillStyle = i===0 ? '#7ee787' : 'rgba(126,231,135,.9)';
+      roundedRect(s.x*CELL+2, s.y*CELL+2, CELL-4, CELL-4, 5);
+    });
+
+    if (paused || over){
+      ctx.fillStyle = 'rgba(0,0,0,.45)';
+      ctx.fillRect(0,0,canvas.width, canvas.height);
+      ctx.fillStyle = '#f5f7fb';
+      ctx.font = '800 40px Inter';
+      ctx.textAlign = 'center';
+      ctx.fillText(over ? 'KONIEC GRY' : 'PAUZA', canvas.width/2, canvas.height/2 - 10);
+      ctx.font = '600 16px Inter';
+      ctx.fillText('R – reset • P – pauza • WASD/strzałki – sterowanie', canvas.width/2, canvas.height/2 + 24);
+    }
   }
 
   function roundedRect(x,y,w,h,r){
@@ -301,63 +320,70 @@
     ctx.arcTo(x+w,y+h,x,y+h,r);
     ctx.arcTo(x,y+h,x,y,r);
     ctx.arcTo(x,y,x+w,y,r);
-    ctx.closePath(); ctx.fill();
+    ctx.closePath();
+    ctx.fill();
   }
 
+  // --------- Pętla gry
   let last=0;
-  function loop(ts){ const dt=(ts-last)/1000; last=ts; update(dt); draw(); requestAnimationFrame(loop); }
+  function loop(ts){
+    const dt = (ts - last)/1000;
+    last = ts;
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
 
-  // Responsywne dopasowanie
+  // --------- Responsywny canvas
   function fit(){
-    const vw=Math.min(window.innerWidth,document.documentElement.clientWidth||window.innerWidth);
-    const vh=window.innerHeight;
-    const maxW=Math.min(900,vw*0.96);
-    const size=Math.min(maxW,vh-160);
-    const final=Math.max(260,Math.floor(size));
-    canvas.style.width=final+'px';
-    canvas.style.height=final+'px';
+    const size = Math.min(window.innerWidth*0.94, 900);
+    const inner = Math.min(size, window.innerHeight*0.72);
+    canvas.style.width = inner+'px';
+    canvas.style.height = inner+'px';
   }
   addEventListener('resize', fit);
 
-  // --- TOP 3 modal
-  const modal=document.getElementById('initialsModal');
-  const in1=document.getElementById('in1');
-  const in2=document.getElementById('in2');
-  const in3=document.getElementById('in3');
-  const saveBtn=document.getElementById('saveInitials');
+  // --------- TOP3 – modal
+  const modal = document.getElementById('initialsModal');
+  const in1 = document.getElementById('in1');
+  const in2 = document.getElementById('in2');
+  const in3 = document.getElementById('in3');
+  const saveBtn = document.getElementById('saveInitials');
 
   [in1,in2,in3].forEach((inp,i,arr)=>{
     inp.addEventListener('input', ()=>{
-      inp.value=(inp.value||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,1);
+      inp.value = (inp.value||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,1);
       if (inp.value && arr[i+1]) arr[i+1].focus();
     });
   });
 
   function qualifiesTop(sc){
-    const top=loadTop().sort((a,b)=>b.score-a.score);
-    if (top.length<3) return sc>0;
-    return sc>top[top.length-1].score;
+    const top = loadTop().sort((a,b)=>b.score-a.score);
+    if (top.length < 3) return sc > 0;
+    return sc > top[top.length-1].score;
   }
 
   function maybeAskInitials(){
     if (!qualifiesTop(score)) return;
     in1.value=''; in2.value=''; in3.value='';
     modal.classList.add('open');
-    setTimeout(()=>in1.focus(),50);
+    setTimeout(()=>in1.focus(), 50);
   }
 
   saveBtn.onclick = ()=>{
-    const name=(in1.value+in2.value+in3.value||'???').padEnd(3,'?').slice(0,3).toUpperCase();
-    const top=loadTop(); top.push({name,score}); top.sort((a,b)=>b.score-a.score);
-    saveTop(top.slice(0,3)); renderTop(); modal.classList.remove('open');
+    const name = (in1.value+in2.value+in3.value || '???').padEnd(3,'?').slice(0,3).toUpperCase();
+    const top = loadTop();
+    top.push({name, score});
+    top.sort((a,b)=>b.score-a.score);
+    saveTop(top.slice(0,3));
+    renderTop();
+    modal.classList.remove('open');
   };
 
-  // --- Restart button
-  btnRestart.addEventListener('click', ()=>{
-    reset();
-  });
+  // --------- Restart z overlay
+  btnRestart.addEventListener('click', reset);
 
-  // --- Start
+  // --------- Start
   reset(); fit(); requestAnimationFrame(loop);
 })();
 </script>
