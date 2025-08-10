@@ -194,21 +194,84 @@ function launch(angle){
 
 /* ===== FIZYKA + KONIEC TURY ===== */
 function updateBalls(dt){
-  let allReturned=true;
-
+  // najpierw aktualizujemy fizykę WSZYSTKICH piłek
   for(const b of balls){
-    if(b.delay>0){ b.delay -= dt*1000; continue; }
-    if(!b.active){ b.active=true; }
-    if(!b.active) continue;
-    allReturned=false;
+    // jeśli piłka czeka na start – odliczaj delay, ale NIE traktuj jej jako „wróconej”
+    if (b.delay > 0) {
+      b.delay -= dt * 1000;
+      continue;
+    }
+    if (!b.active) b.active = true;
 
-    const mul = fastReturn && b.vy>0 ? 1.8 : 1;
-    let tleft=dt*mul, step=MAX_STEP;
+    const mul = fastReturn && b.vy > 0 ? 1.8 : 1;
+    let tleft = dt * mul, step = MAX_STEP;
 
-    while(tleft>0){
-      const t=Math.min(step,tleft);
-      b.x += b.vx*t; b.y += b.vy*t;
+    while (tleft > 0) {
+      const t = Math.min(step, tleft);
+      b.x += b.vx * t; b.y += b.vy * t;
 
+      // ściany
+      if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx); }
+      if (b.x > W - b.r) { b.x = W - b.r; b.vx = -Math.abs(b.vx); }
+      if (b.y < TOP + b.r) { b.y = TOP + b.r; b.vy = Math.abs(b.vy); }
+
+      // kolizje z klockami
+      for (const k of bricks) {
+        const rx = LEFT + k.col * CELL, ry = TOP + k.row * ROW_H, rw = CELL, rh = ROW_H;
+        if (b.x + b.r < rx || b.x - b.r > rx + rw || b.y + b.r < ry || b.y - b.r > ry + rh) continue;
+        const prevX = b.x - b.vx * t, prevY = b.y - b.vy * t;
+        const wasX = prevX >= rx && prevX <= rx + rw;
+        const wasY = prevY >= ry && prevY <= ry + rh;
+        if (wasX) b.vy *= -1; else if (wasY) b.vx *= -1; else { b.vx *= -1; b.vy *= -1; }
+        k.hp--; score++;
+      }
+
+      // orby (+1)
+      for (const o of orbs) {
+        const ox = LEFT + o.col * CELL + CELL / 2, oy = TOP + o.row * ROW_H + ROW_H / 2;
+        const d2 = (ox - b.x) * (ox - b.x) + (oy - b.y) * (oy - b.y);
+        if (d2 < (BALL_R + 8) * (BALL_R + 8)) { o.col = -999; ballsCount++; uiBalls.textContent = ballsCount; }
+      }
+
+      tleft -= t;
+
+      // dno → piłka „wróciła”
+      if (b.y > H - 26) {
+        if (nextLaunchPos && nextLaunchPos._set !== true) nextLaunchPos = { x: b.x, y: baseLaunchPos.y, _set: true };
+        b.active = false; b.vx = 0; b.vy = 0; b.y = H - 20;
+        break;
+      }
+    }
+  }
+
+  // sprzątanie
+  bricks = bricks.filter(k => k.hp > 0);
+  orbs   = orbs.filter(o => o.col >= 0);
+
+  // >>> KLUCZ: sprawdzamy "czy wszystkie wróciły" DOPIERO TERAZ <<<
+  const allReturned = balls.every(b => b.delay <= 0 && !b.active);
+
+  if (allReturned && state === State.FLY) {
+    // ustaw bazę strzału na pozycję pierwszej wracającej kulki (jeśli była)
+    if (nextLaunchPos && nextLaunchPos._set) {
+      baseLaunchPos = {
+        x: clamp(nextLaunchPos.x, LEFT + BALL_R, LEFT + COLS * CELL - BALL_R),
+        y: baseLaunchPos.y
+      };
+    }
+    nextLaunchPos = { ...baseLaunchPos };
+
+    // nowa runda: spawnRow przesuwa istniejące i dodaje nowy rząd
+    spawnRow();
+    round++; uiRound.textContent = round;
+
+    // przegrana?
+    const lost = bricks.some(k => TOP + k.row * ROW_H + ROW_H >= H - 36);
+    if (lost) { gameOver(); return; }
+
+    state = State.AIM; fastReturn = false;
+  }
+}
       // ściany
       if(b.x < b.r){ b.x=b.r; b.vx=Math.abs(b.vx); }
       if(b.x > W-b.r){ b.x=W-b.r; b.vx=-Math.abs(b.vx); }
