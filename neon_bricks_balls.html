@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Neon Bricks & Balls – PTKM</title>
+<style>
+  :root{
+    --bg:#0a0b10; --fg:#e6f3ff;
+    --neon1:#00e7ff; --neon2:#ff00e6; --neon3:#00ff95;
+    --glass:rgba(255,255,255,.06);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    margin:0; font-family:system-ui,Segoe UI,Roboto,sans-serif; color:var(--fg);
+    background: radial-gradient(1000px 600px at 15% 0%,#121533 0%,#08090f 60%,#05060b 100%),
+                radial-gradient(900px 500px at 90% 100%,#1a0029 0%,#07070c 60%,#05060b 100%);
+    overflow:hidden; touch-action:none; user-select:none;
+  }
+  .wrap{position:relative; width:100%; height:100%; display:grid; place-items:center; padding:16px;}
+  canvas{width:100%; max-width:940px; aspect-ratio:9/16; border-radius:18px; background:#06070d;
+         box-shadow:0 0 0 2px rgba(255,255,255,.03) inset, 0 0 60px #000; touch-action:none;}
+  .hud{position:absolute; top:12px; left:50%; transform:translateX(-50%); width:min(92vw,900px);
+       display:flex; justify-content:space-between; gap:10px; pointer-events:none; z-index:5;}
+  .chip{pointer-events:auto; background:var(--glass); backdrop-filter:blur(8px);
+        border:1px solid rgba(255,255,255,.12); border-radius:999px; padding:8px 12px; display:flex; gap:8px; align-items:center;}
+  .chip b{color:var(--neon1)}
+  .chip .btn{all:unset; cursor:pointer; padding:.35rem .8rem; border-radius:999px; color:#fff; font-weight:700;
+             background:linear-gradient(90deg,var(--neon1),var(--neon2));}
+  .home-btn{
+    position:fixed; top:16px; left:16px; z-index:9; display:inline-flex; gap:.5rem; align-items:center;
+    padding:.55rem .9rem; border-radius:999px; background:var(--glass); color:var(--fg); text-decoration:none;
+    border:1px solid color-mix(in oklab, var(--neon1), #fff 20%); box-shadow:0 0 12px var(--neon1), inset 0 0 8px rgba(255,255,255,.08);
+  }
+  .overlay{position:absolute; inset:0; display:none; place-items:center; padding:16px; z-index:8;}
+  .panel{width:min(92vw,900px); background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+         border:1px solid rgba(255,255,255,.12); border-radius:18px; padding:22px;}
+  .title{font-size:clamp(28px,5vw,56px); font-weight:900; letter-spacing:.02em; margin:6px 0 12px;
+         background:linear-gradient(90deg,var(--neon1),var(--neon2)); -webkit-background-clip:text; background-clip:text; color:transparent;}
+  .btn{all:unset; cursor:pointer; display:inline-block; background:linear-gradient(90deg,var(--neon1),var(--neon2));
+       color:#fff; font-weight:800; letter-spacing:.04em; padding:10px 16px; border-radius:12px; }
+  .btn.outline{background:transparent; border:1px solid rgba(255,255,255,.2)}
+  .touch{position:absolute; inset:auto 0 10px 0; display:flex; justify-content:center; gap:18px; pointer-events:none}
+  .touch .tbtn{pointer-events:auto; all:unset; width:26vw; max-width:220px; aspect-ratio:5/2; display:grid; place-items:center;
+               color:#fff; font-weight:900; letter-spacing:.06em; border-radius:18px; cursor:pointer;
+               background: radial-gradient(120% 140% at 80% -20%, rgba(255,255,255,.16), rgba(255,255,255,.06) 40%, rgba(255,255,255,.02) 80%);
+               border:1px solid rgba(255,255,255,.14); box-shadow:0 0 40px rgba(0,0,0,.45), inset 0 0 24px rgba(255,255,255,.06);
+  }
+  .touch .fire{width:20vw; max-width:180px}
+</style>
+</head>
+<body>
+  <a class="home-btn" href="index.html" aria-label="Powrót">⟵ Strona główna</a>
+
+  <div class="wrap">
+    <canvas id="game" aria-label="Neon Bricks & Balls"></canvas>
+
+    <div class="hud">
+      <div class="chip">Runda: <b id="round">1</b></div>
+      <div class="chip">Piłki: <b id="balls">1</b></div>
+      <div class="chip">Rekord: <b id="best">0</b> <button id="restart" class="btn">↻</button></div>
+    </div>
+
+    <div id="menu" class="overlay" style="display:grid">
+      <div class="panel">
+        <div class="title">NEON BRICKS & BALLS</div>
+        <p>Przeciągnij, aby wycelować. Puść – wszystkie piłki strzelą kolejno. Po turze klocki spadają o 1. Zbieraj <b>●</b>, by mieć więcej piłek.</p>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px">
+          <button id="start" class="btn">▶ Start</button>
+          <button id="clear" class="btn outline">Wyczyść rekord</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="gameover" class="overlay">
+      <div class="panel">
+        <div class="title">Koniec gry</div>
+        <p>Runda: <b id="finalRound">0</b> &nbsp; • &nbsp; Rekord: <b id="finalBest">0</b></p>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px">
+          <button id="again" class="btn">↻ Jeszcze raz</button>
+          <button id="toMenu" class="btn outline">🏠 Menu</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dodatkowe przyciski mobilne (opcjonalnie: pauza / turbo powrotu) -->
+    <div class="touch">
+      <button id="btnPause" class="tbtn">⏸︎</button>
+      <button id="btnFire"  class="tbtn fire">●</button>
+      <button id="btnFast"  class="tbtn">⏩</button>
+    </div>
+  </div>
+
+<script>
+/* ===== USTAWIENIA POD KAMERĘ 9:16 ===== */
+const DPR = Math.max(1, Math.min(devicePixelRatio||1, 2));
+const W = 540;     // wirtualna szerokość świata (stała)
+const H = 960;     // wirtualna wysokość (9:16)
+const COLS = 8;    // liczba kolumn siatki
+const CELL = Math.floor((W-40)/COLS); // rozmiar klocka
+const LEFT = Math.floor((W - COLS*CELL)/2); // lewy margines siatki
+const TOP  = 110;  // górny margines siatki
+const ROW_H = CELL; // wysokość rzędu
+const BALL_R = 6;
+const MAX_STEP = 1/120;
+const EMIT_DELAY = 60; // ms pomiędzy piłkami
+
+/* ===== KANWA ===== */
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+function resize(){
+  const cw = Math.min(window.innerWidth-32, 540);
+  const ch = cw * (16/9);
+  canvas.style.height = ch+'px';
+  canvas.width = Math.floor(W * DPR);
+  canvas.height = Math.floor(H * DPR);
+}
+window.addEventListener('resize', resize, {passive:true});
+resize();
+
+/* ===== STAN GRY ===== */
+const State={MENU:0,AIM:1,FLY:2,SETTLE:3,OVER:4,PAUSE:5};
+let state=State.MENU;
+
+let round=1;
+let ballsCount=1;
+let baseLaunchPos={x:W/2, y:H-40};  // gdzie wracają piłki i skąd startują
+let nextLaunchPos={...baseLaunchPos}; // po turze ustawiamy nową bazę na pierwszy punkt powrotu
+let balls=[];
+let bricks=[]; // {x,y,hp}, y = indeks wiersza (0 na górze)
+let orbs=[];   // „+1 ball” – {x,y} w koordach siatki (kolumna, wiersz)
+let aiming=false, aimFrom=null, aimTo=null;
+let best = Number(localStorage.getItem('nbb_best')||0);
+let fastReturn=false;
+
+const uiRound=document.getElementById('round');
+const uiBalls=document.getElementById('balls');
+const uiBest=document.getElementById('best');
+const menuEl=document.getElementById('menu');
+const overEl=document.getElementById('gameover');
+const finalRound=document.getElementById('finalRound');
+const finalBest=document.getElementById('finalBest');
+
+uiBest.textContent=best;
+
+/* ===== POMOCNICZE ===== */
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const rand=(a,b)=>a+Math.random()*(b-a);
+const choice=arr=>arr[(Math.random()*arr.length)|0];
+
+function toWorld(px,py){ // piksele ekranu -> świat (W,H)
+  const rect=canvas.getBoundingClientRect();
+  const x=(px-rect.left)/rect.width*W;
+  const y=(py-rect.top)/rect.height*H;
+  return {x,y};
+}
+
+function show(menu, over){
+  menuEl.style.display = menu ? 'grid' : 'none';
+  overEl.style.display  = over ? 'grid' : 'none';
+}
+
+/* ===== GENERACJA RZĘDU ===== */
+function spawnRow(){
+  // szansa na klocek: ~70%, hp rośnie z rundą
+  const baseHP = 1 + Math.floor((round-1)*0.6);
+  const newRow=[];
+  for(let c=0;c<COLS;c++){
+    if(Math.random()<0.7){
+      newRow.push({col:c, hp: baseHP + (Math.random()<0.15?1:0)});
+    }
+  }
+  // co którąś kolumnę wrzuć orb (piłka +1)
+  if(Math.random()<0.45){
+    const freeCols=[...Array(COLS).keys()].filter(k=>!newRow.find(b=>b.col===k));
+    if(freeCols.length){
+      orbs.push({col: choice(freeCols), row:0}); // pojawia się w nowym górnym rzędzie
+    }
+  }
+  // Przesuń istniejące elementy w dół
+  for(const b of bricks) b.row++;
+  for(const o of orbs) o.row++;
+  // Dodaj nowy rząd (row=0 to góra)
+  for(const b of newRow) bricks.push({col:b.col, row:0, hp:b.hp});
+}
+
+/* ===== START / RESET ===== */
+function startGame(){
+  round=1; ballsCount=1; baseLaunchPos={x:W/2,y:H-40}; nextLaunchPos={...baseLaunchPos};
+  balls.length=0; bricks.length=0; orbs.length=0;
+  spawnRow();
+  state=State.AIM;
+  uiRound.textContent=round;
+  uiBalls.textContent=ballsCount;
+  show(false,false);
+}
+function gameOver(){
+  state=State.OVER;
+  best=Math.max(best, round-1);
+  localStorage.setItem('nbb_best', best);
+  uiBest.textContent=best;
+  finalRound.textContent=round-1;
+  finalBest.textContent=best;
+  show(false,true);
+}
+
+/* ===== PIŁKI ===== */
+function launch(angle){
+  // ogranicz kąt (żeby nie strzelać poziomo)
+  const minA = 0.20*Math.PI, maxA = 0.80*Math.PI;
+  const a = clamp(angle, minA, maxA);
+  balls.length=0;
+  const speed = 540;
+  for(let i=0;i<ballsCount;i++){
+    balls.push({
+      x:baseLaunchPos.x, y:baseLaunchPos.y, r:BALL_R,
+      vx: Math.cos(a)*speed, vy: Math.sin(a)*speed,
+      delay: i*EMIT_DELAY, active:false
+    });
+  }
+  state=State.FLY;
+}
+
+function updateBalls(dt){
+  let allReturned=true;
+  for(const b of balls){
+    if(b.delay>0){ b.delay -= dt*1000; continue; }
+    if(!b.active){ b.active=true; }
+
+    if(!b.active) continue;
+    allReturned=false;
+
+    // szybszy powrót (przycisk ⏩)
+    const mul = fastReturn && b.vy>0 ? 1.8 : 1;
+
+    // ruch w małych krokach
+    let timeLeft = dt*mul;
+    const step = MAX_STEP;
+    while(timeLeft>0){
+      const t = Math.min(step, timeLeft);
+      b.x += b.vx * t; b.y += b.vy * t;
+
+      // ściany
+      if(b.x < b.r){ b.x=b.r; b.vx=Math.abs(b.vx); }
+      if(b.x > W-b.r){ b.x=W-b.r; b.vx=-Math.abs(b.vx); }
+      if(b.y < TOP + b.r){ b.y = TOP + b.r; b.vy=Math.abs(b.vy); }
+
+      // kolizje z klockami
+      // przelatujemy po tych, które leżą blisko (prosty broad-phase)
+      for(const k of bricks){
+        const bx = LEFT + k.col*CELL + CELL/2;
+        const by = TOP + k.row*ROW_H + ROW_H/2;
+        if (Math.abs(bx-b.x) > CELL/2+12 || Math.abs(by-b.y) > ROW_H/2+12) continue;
+        // AABB
+        const rx = LEFT + k.col*CELL, ry = TOP + k.row*ROW_H, rw = CELL, rh = ROW_H;
+        if(b.x+b.r<rx || b.x-b.r>rx+rw || b.y+b.r<ry || b.y-b.r>ry+rh) continue;
+        // odbicie po stronie dominującej
+        const prevX = b.x - b.vx*t, prevY = b.y - b.vy*t;
+        const wasInsideX = prevX>=rx && prevX<=rx+rw;
+        const wasInsideY = prevY>=ry && prevY<=ry+rh;
+        if(wasInsideX){ b.vy*=-1; }
+        else if(wasInsideY){ b.vx*=-1; }
+        else { b.vx*=-1; b.vy*=-1; }
+        k.hp--;
+      }
+
+      // zbieranie orbów
+      for(const o of orbs){
+        const ox = LEFT + o.col*CELL + CELL/2;
+        const oy = TOP + o.row*ROW_H + ROW_H/2;
+        const d2 = (ox-b.x)*(ox-b.x)+(oy-b.y)*(oy-b.y);
+        if(d2 < (BALL_R+8)*(BALL_R+8)){
+          o.col = -999; // oznacz do usunięcia
+          ballsCount++;
+          uiBalls.textContent=ballsCount;
+        }
+      }
+
+      timeLeft -= t;
+      // dno (powrót)
+      if(b.y > H - 26){
+        // zapamiętaj pierwszy punkt powrotu (ustawi bazę strzału na następną turę)
+        if(nextLaunchPos === null) nextLaunchPos = {x:b.x, y:baseLaunchPos.y};
+        else if(nextLaunchPos.x === baseLaunchPos.x && nextLaunchPos.y === baseLaunchPos.y)
+          nextLaunchPos = {x:b.x, y:baseLaunchPos.y};
+        // „parkuj” kulkę poniżej i już jej nie licz
+        b.active=false; b.vx=0; b.vy=0; b.y=H-20; b.x=b.x;
+        break;
+      }
+    }
+  }
+
+  // wyczyść zniszczone
+  bricks = bricks.filter(k=>k.hp>0);
+  orbs   = orbs.filter(o=>o.col>=0);
+
+  if(allReturned){
+    // ustaw nową bazę strzału na miejsce pierwszego powrotu (jeśli było)
+    if(nextLaunchPos) baseLaunchPos = {x: clamp(nextLaunchPos.x, LEFT+BALL_R, LEFT+COLS*CELL-BALL_R), y: baseLaunchPos.y};
+    nextLaunchPos = {...baseLaunchPos};
+
+    // przesuń wszystko w dół i dołóż nowy rząd
+    for(const k of bricks) k.row++;
+    for(const o of orbs)   o.row++;
+    spawnRow();
+    round++;
+    uiRound.textContent=round;
+
+    // sprawdź przegraną – coś dotknęło linii śmierci?
+    const lost = bricks.some(k => TOP + k.row*ROW_H + ROW_H >= H - 36);
+    if(lost){ gameOver(); return; }
+
+    state=State.AIM;
+    fastReturn=false;
+  }
+}
+
+/* ===== RYSOWANIE ===== */
+function draw(){
+  ctx.save();
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.scale(DPR,DPR);
+
+  // ramka
+  ctx.strokeStyle='rgba(0,231,255,.6)'; ctx.lineWidth=2; ctx.shadowColor='rgba(0,231,255,.35)'; ctx.shadowBlur=14;
+  roundRect(8,8,W-16,H-16,16); ctx.stroke();
+
+  // siatka tła
+  ctx.shadowBlur=0; ctx.shadowColor='transparent';
+  for(let r=0;r<12;r++){
+    const y = TOP + r*ROW_H;
+    ctx.strokeStyle='rgba(255,255,255,.04)';
+    ctx.beginPath(); ctx.moveTo(LEFT,y+.5); ctx.lineTo(LEFT+COLS*CELL, y+.5); ctx.stroke();
+  }
+
+  // klocki
+  for(const k of bricks){
+    const x = LEFT + k.col*CELL + 4;
+    const y = TOP + k.row*ROW_H + 4;
+    const w = CELL - 8, h = ROW_H - 8;
+    const hue = (k.col/COLS*300)|0;
+    const grad = ctx.createLinearGradient(x,y,x+w,y+h);
+    grad.addColorStop(0, `hsl(${hue} 100% 55% / .85)`);
+    grad.addColorStop(1, `hsl(${(hue+60)%360} 100% 55% / .85)`);
+    ctx.fillStyle=grad; ctx.shadowColor=`hsl(${hue} 100% 60%)`; ctx.shadowBlur=16;
+    roundRect(x,y,w,h,10); ctx.fill();
+
+    // HP
+    ctx.shadowBlur=0; ctx.fillStyle='#fff'; ctx.font='700 16px system-ui,Segoe UI,Roboto'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(k.hp, x+w/2, y+h/2);
+  }
+
+  // orby (+1 ball)
+  for(const o of orbs){
+    const cx = LEFT + o.col*CELL + CELL/2;
+    const cy = TOP + o.row*ROW_H + ROW_H/2;
+    ctx.shadowColor='rgba(0,255,165,.8)'; ctx.shadowBlur=14; ctx.fillStyle='rgba(0,255,165,.9)';
+    circle(cx,cy,8); ctx.fill();
+    ctx.shadowBlur=0; ctx.fillStyle='#001d14'; ctx.font='900 12px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('+', cx, cy);
+  }
+
+  // podgląd trajektorii
+  if(state===State.AIM && aimFrom && aimTo){
+    const dx = aimTo.x - aimFrom.x, dy = aimTo.y - aimFrom.y;
+    let ang = Math.atan2(dy, dx);
+    // kąt ograniczony
+    const minA = 0.20*Math.PI, maxA = 0.80*Math.PI;
+    ang = clamp(ang, minA, maxA);
+
+    const len=160;
+    const ex = baseLaunchPos.x + Math.cos(ang)*len;
+    const ey = baseLaunchPos.y + Math.sin(ang)*len;
+    ctx.strokeStyle='rgba(255,255,255,.35)'; ctx.setLineDash([6,8]); ctx.lineWidth=2; ctx.shadowBlur=0;
+    ctx.beginPath(); ctx.moveTo(baseLaunchPos.x, baseLaunchPos.y); ctx.lineTo(ex,ey); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // piłki
+  for(const b of balls){
+    if(b.delay>0) continue;
+    ctx.shadowColor='rgba(255,255,255,.7)'; ctx.shadowBlur=12;
+    const g = ctx.createRadialGradient(b.x,b.y,1,b.x,b.y, BALL_R*1.2);
+    g.addColorStop(0,'#fff'); g.addColorStop(1,'rgba(255,255,255,.15)');
+    ctx.fillStyle=g; circle(b.x,b.y,BALL_R); ctx.fill();
+  }
+
+  // baza strzału
+  ctx.shadowColor='rgba(0,231,255,.8)'; ctx.shadowBlur=18;
+  const grad = ctx.createLinearGradient(baseLaunchPos.x-18, baseLaunchPos.y, baseLaunchPos.x+18, baseLaunchPos.y);
+  grad.addColorStop(0,'rgba(0,231,255,.9)'); grad.addColorStop(1,'rgba(255,0,230,.9)');
+  ctx.fillStyle=grad; roundRect(baseLaunchPos.x-20,H-28,40,10,5); ctx.fill();
+
+  ctx.restore();
+}
+
+/* ===== RYS. POMOCNICZE ===== */
+function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function circle(x,y,r){ ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.closePath(); }
+
+/* ===== PĘTLA ===== */
+let last=0;
+function loop(ts){
+  requestAnimationFrame(loop);
+  const dt = Math.min(0.032, (ts-last)/1000 || 0);
+  last = ts;
+
+  if(state===State.FLY) updateBalls(dt);
+  draw();
+}
+requestAnimationFrame(loop);
+
+/* ===== WEJŚCIA ===== */
+let dragging=false;
+canvas.addEventListener('pointerdown', e=>{
+  if(state===State.MENU || state===State.OVER) return;
+  if(state===State.PAUSE) return;
+  const p = toWorld(e.clientX,e.clientY);
+  dragging=true; aiming=true; aimFrom={x:baseLaunchPos.x, y:baseLaunchPos.y}; aimTo=p;
+});
+canvas.addEventListener('pointermove', e=>{
+  if(!dragging) return;
+  const p = toWorld(e.clientX,e.clientY);
+  aimTo=p;
+});
+canvas.addEventListener('pointerup', e=>{
+  if(!dragging) return; dragging=false;
+  if(state===State.AIM && aimFrom && aimTo){
+    const dx = aimTo.x - aimFrom.x, dy = aimTo.y - aimFrom.y;
+    const ang = Math.atan2(dy, dx);
+    launch(ang);
+  }
+  aiming=false; aimFrom=null; aimTo=null;
+});
+canvas.addEventListener('pointercancel', ()=>{ dragging=false; aiming=false; });
+
+window.addEventListener('keydown', e=>{
+  if(e.code==='Space'){
+    if(state===State.AIM){ // szybki strzał na wprost
+      launch(Math.PI*0.5);
+    } else if(state===State.FLY){
+      fastReturn = true;
+    } else if(state===State.PAUSE){
+      state = State.AIM;
+    }
+    e.preventDefault();
+  }
+  if(e.key==='p' || e.key==='P'){
+    if(state===State.PAUSE) state=State.AIM; else if(state!==State.MENU && state!==State.OVER) state=State.PAUSE;
+  }
+});
+
+/* ===== PRZYCISKI ===== */
+document.getElementById('start').addEventListener('click', startGame);
+document.getElementById('clear').addEventListener('click', ()=>{ localStorage.removeItem('nbb_best'); best=0; uiBest.textContent=0; });
+document.getElementById('restart').addEventListener('click', startGame);
+document.getElementById('again').addEventListener('click', startGame);
+document.getElementById('toMenu').addEventListener('click', ()=>{ state=State.MENU; show(true,false); });
+
+document.getElementById('btnPause').addEventListener('pointerdown', e=>{
+  e.preventDefault();
+  if(state===State.PAUSE) state=State.AIM; else if(state!==State.MENU && state!==State.OVER) state=State.PAUSE;
+});
+document.getElementById('btnFire').addEventListener('pointerdown', e=>{
+  e.preventDefault();
+  if(state===State.AIM) launch(Math.PI*0.5);
+});
+document.getElementById('btnFast').addEventListener('pointerdown', e=>{
+  e.preventDefault(); fastReturn = true;
+});
+document.getElementById('btnFast').addEventListener('pointerup', ()=> fastReturn=false);
+
+/* ===== INIT ===== */
+show(true,false);
+uiRound.textContent=round;
+uiBalls.textContent=ballsCount;
+
+/* ===== KONIEC ===== */
+</script>
+</body>
+</html>
