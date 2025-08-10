@@ -7,36 +7,89 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@600;800&display=swap" rel="stylesheet">
 <style>
-  :root{--bg:#0b0f14;--card:rgba(255,255,255,.08);--text:#f5f7fb;--muted:#b8c0cc;--gold:#ffd166;}
+  :root{
+    --bg:#0b0f14; --card:rgba(255,255,255,.08); --text:#f5f7fb; --muted:#b8c0cc; --gold:#ffd166;
+    --accent:#7ee787; --danger:#ff6b6b;
+  }
   *{box-sizing:border-box}
   html,body{height:100%}
-  body{margin:0;color:var(--text);font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;
-       background:var(--bg) url("arcade.png") center/cover fixed no-repeat;
-       min-height:100dvh;display:flex;align-items:flex-start;justify-content:center;padding:16px;}
-  .wrap{width:min(94vw,900px);margin:0 auto;}
-  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px}
-  a.btn{appearance:none;background:var(--card);color:var(--text);padding:.6rem .9rem;border-radius:12px;
-        text-decoration:none;font-weight:800;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 6px 18px rgba(0,0,0,.35)}
-  .shell{display:grid;gap:12px}
-  .hud{display:grid;gap:12px;grid-template-columns:1.2fr .8fr}
-  @media (max-width:720px){.hud{grid-template-columns:1fr} header{flex-direction:column;gap:8px}}
-  .panel{padding:12px 14px;border-radius:14px;background:var(--card);box-shadow:0 0 0 1px rgba(255,255,255,.08),0 18px 40px rgba(0,0,0,.35)}
-  .stats{display:flex;flex-wrap:wrap;gap:12px;align-items:center}.stat{display:flex;gap:8px;align-items:center}.stat .v{font-weight:800}
-  .board{background:#0e141b;border-radius:16px;overflow:hidden;display:grid;place-items:center;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 24px 60px rgba(0,0,0,.5)}
-  canvas{width:100%;max-width:940px;border-radius:18px;background:url("neon.png") center/cover no-repeat;
-         box-shadow:0 0 0 2px rgba(255,255,255,.03) inset,0 0 60px #000;display:block;image-rendering:pixelated}
-  .help{margin-top:10px;color:var(--muted);text-align:center}
-  .top3 h3{margin:0 0 6px 0;font-size:14px;letter-spacing:.5px;color:var(--gold)}
-  .table{width:100%;border-collapse:collapse;font-size:14px}.table td{padding:6px 4px}
-  .table tr:not(:last-child) td{border-bottom:1px solid rgba(255,255,255,.07)}.table .rank{opacity:.8;width:2ch}
-  .table .name{font-weight:800}.table .score{text-align:right}
-  .modal{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,.5);padding:20px;z-index:10}
+  body{
+    margin:0; color:var(--text); font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;
+    background: var(--bg) url("arcade.png") center/cover fixed no-repeat;
+    min-height:100dvh; display:flex; align-items:flex-start; justify-content:center; padding:16px;
+    overscroll-behavior-y: none;   /* 🔒 brak „sprężynowania/odświeżania” */
+    touch-action: manipulation;    /* 🔒 ogranicz gesty na całej stronie */
+  }
+
+  .wrap{width:min(94vw,900px); margin:0 auto;}
+  header{display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:10px}
+  a.btn,button.btn{
+    appearance:none; border:none; background:var(--card); color:var(--text);
+    padding:.6rem .9rem; border-radius:12px; text-decoration:none; font-weight:800; cursor:pointer;
+    box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 6px 18px rgba(0,0,0,.35);
+  }
+
+  .shell{display:grid; gap:12px}
+  .hud{display:grid; gap:12px; grid-template-columns:1.2fr .8fr}
+  @media (max-width:720px){ .hud{grid-template-columns:1fr} header{flex-direction:column; gap:8px} }
+
+  .panel{padding:12px 14px; border-radius:14px; background:var(--card);
+         box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 18px 40px rgba(0,0,0,.35)}
+  .stats{display:flex; flex-wrap:wrap; gap:12px; align-items:center}
+  .stat{display:flex; gap:8px; align-items:center} .stat .v{font-weight:800}
+
+  .board{
+    position:relative;
+    background:#0e141b; border-radius:16px; overflow:hidden; display:grid; place-items:center;
+    box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 24px 60px rgba(0,0,0,.5);
+  }
+
+  canvas{
+    width:100%; max-width:940px; border-radius:18px;
+    background:url("neon.png") center/cover no-repeat;
+    box-shadow:0 0 0 2px rgba(255,255,255,.03) inset, 0 0 60px #000;
+    display:block; image-rendering:pixelated;
+    touch-action:none;          /* 🔒 na planszy gesty nie przewijają */
+  }
+
+  /* Overlay „game over” z przyciskiem Restart */
+  .overlay{
+    position:absolute; inset:0; display:none; place-items:center; background:rgba(0,0,0,.45);
+  }
+  .overlay.open{ display:grid; }
+  .go-card{
+    background:#10161e; padding:18px; border-radius:16px;
+    box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 24px 60px rgba(0,0,0,.6);
+    text-align:center; min-width:260px;
+  }
+  .go-title{font-weight:800; font-size:28px; margin:0 0 8px}
+  .go-sub{color:var(--muted); margin:0 0 14px}
+  .btn.primary{background:rgba(126,231,135,.22)}
+
+  .help{margin-top:10px; color:var(--muted); text-align:center}
+
+  /* TOP 3 */
+  .top3 h3{margin:0 0 6px 0; font-size:14px; letter-spacing:.5px; color:var(--gold)}
+  .table{width:100%; border-collapse:collapse; font-size:14px}
+  .table td{padding:6px 4px}
+  .table tr:not(:last-child) td{border-bottom:1px solid rgba(255,255,255,.07)}
+  .table .rank{opacity:.8; width:2ch}
+  .table .name{font-weight:800}
+  .table .score{text-align:right}
+
+  /* Modal inicjałów (TOP3) */
+  .modal{position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.5); padding:20px; z-index:10}
   .modal.open{display:grid}
-  .dialog{width:min(92vw,420px);background:#10161e;border-radius:16px;padding:18px;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 24px 60px rgba(0,0,0,.6)}
-  .dialog h2{margin:0 0 8px} .dialog p{margin:0 0 12px;color:var(--muted)}
-  .initials{display:flex;gap:8px;justify-content:center;margin:12px 0 16px}
-  .initials input{width:64px;height:64px;text-transform:uppercase;text-align:center;font-size:28px;font-weight:800;border:none;outline:none;color:var(--text);background:rgba(255,255,255,.08);border-radius:12px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
-  .dialog .row{display:flex;gap:8px;justify-content:flex-end}
+  .dialog{width:min(92vw,420px); background:#10161e; border-radius:16px; padding:18px;
+          box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 24px 60px rgba(0,0,0,.6)}
+  .dialog h2{margin:0 0 8px} .dialog p{margin:0 0 12px; color:var(--muted)}
+  .initials{display:flex; gap:8px; justify-content:center; margin:12px 0 16px}
+  .initials input{
+    width:64px; height:64px; text-transform:uppercase; text-align:center; font-size:28px; font-weight:800;
+    border:none; outline:none; color:var(--text); background:rgba(255,255,255,.08); border-radius:12px;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);
+  }
+  .dialog .row{display:flex; gap:8px; justify-content:flex-end}
 </style>
 </head>
 <body>
@@ -63,7 +116,17 @@
 
       <div class="board">
         <canvas id="game" width="600" height="600"></canvas>
+
+        <!-- Overlay z przyciskiem Restart po końcu gry -->
+        <div class="overlay" id="gameOverOverlay" aria-hidden="true">
+          <div class="go-card">
+            <div class="go-title">KONIEC GRY</div>
+            <div class="go-sub">Wynik: <span id="finalScore">0</span></div>
+            <button class="btn primary" id="btnRestart">🔁 Restart</button>
+          </div>
+        </div>
       </div>
+
       <div class="help">Siatka 30×30. Zbieraj jedzenie, nie ugryź ogona ani ściany!</div>
     </div>
   </div>
@@ -86,17 +149,23 @@
 
 <script>
 (() => {
+  // --- DOM
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
   const scoreEl = document.getElementById('score');
   const bestEl  = document.getElementById('best');
   const topTable = document.querySelector('#topTable tbody');
+  const overlay = document.getElementById('gameOverOverlay');
+  const finalScoreEl = document.getElementById('finalScore');
+  const btnRestart = document.getElementById('btnRestart');
 
+  // --- Stałe gry
   const GRID = 30;
   const CELL = canvas.width / GRID;
   const SPEED_START = 8;
   const SPEED_STEP = .35;
 
+  // --- Storage
   const BEST_KEY = 'ptkm_snake_best';
   const TOP_KEY  = 'ptkm_snake_top3';
 
@@ -117,6 +186,7 @@
   }
   renderTop();
 
+  // --- Stan
   let snake, dir, nextDir, food, score, speed, paused, over, acc;
 
   function reset(){
@@ -125,6 +195,8 @@
     spawnFood();
     score = 0; speed = SPEED_START; paused=false; over=false; acc=0;
     scoreEl.textContent = score;
+    overlay.classList.remove('open');
+    overlay.setAttribute('aria-hidden','true');
   }
 
   function spawnFood(){
@@ -132,12 +204,12 @@
     while (snake?.some(s => s.x===food.x && s.y===food.y));
   }
 
-  // klawiatura
+  // --- Klawiatura
   const map = {
-    'ArrowUp':{x:0,y:-1},'KeyW':{x:0,y:-1},
-    'ArrowDown':{x:0,y:1},'KeyS':{x:0,y:1},
-    'ArrowLeft':{x:-1,y:0},'KeyA':{x:-1,y:0},
-    'ArrowRight':{x:1,y:0},'KeyD':{x:1,y:0},
+    'ArrowUp':{x:0,y:-1}, 'KeyW':{x:0,y:-1},
+    'ArrowDown':{x:0,y:1}, 'KeyS':{x:0,y:1},
+    'ArrowLeft':{x:-1,y:0}, 'KeyA':{x:-1,y:0},
+    'ArrowRight':{x:1,y:0}, 'KeyD':{x:1,y:0},
   };
   addEventListener('keydown', (e) => {
     if (e.code==='KeyP'){ paused=!paused; return; }
@@ -148,7 +220,7 @@
     nextDir = nd;
   });
 
-  // dotyk – tap/swipe
+  // --- Dotyk: tap/swipe + blokada scrolla
   function setDirByTap(clientX, clientY){
     if (over) return;
     const r = canvas.getBoundingClientRect();
@@ -161,14 +233,17 @@
     if (nd.x===-dir.x && nd.y===-dir.y) return;
     nextDir = nd;
   }
-  canvas.addEventListener('pointerdown', e => setDirByTap(e.clientX, e.clientY));
+  canvas.addEventListener('pointerdown', e => { e.preventDefault(); setDirByTap(e.clientX, e.clientY); }, {passive:false});
 
   let swipeStart=null;
   canvas.addEventListener('touchstart', e=>{
+    e.preventDefault();
     if (!e.touches[0]) return;
     swipeStart = {x:e.touches[0].clientX, y:e.touches[0].clientY, t:performance.now()};
-  }, {passive:true});
+  }, {passive:false});
+  canvas.addEventListener('touchmove', e=>{ e.preventDefault(); }, {passive:false});
   canvas.addEventListener('touchend', e=>{
+    e.preventDefault();
     if (!swipeStart) return;
     const t = performance.now()-swipeStart.t;
     const touch = e.changedTouches[0];
@@ -179,14 +254,13 @@
       if (!(nd.x===-dir.x && nd.y===-dir.y)) nextDir=nd;
     } else setDirByTap(touch.clientX,touch.clientY);
     swipeStart=null;
-  }, {passive:true});
+  }, {passive:false});
 
+  // --- Update / Draw
   function update(dt){
     if (paused || over) return;
-    acc += dt;
-    const step = 1/speed;
-    if (acc < step) return;
-    acc -= step;
+    acc += dt; const step = 1/speed;
+    if (acc < step) return; acc -= step;
 
     dir = nextDir;
     const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
@@ -197,12 +271,17 @@
     if (head.x===food.x && head.y===food.y){
       score++; scoreEl.textContent = score;
       if (score > best){ best = score; bestEl.textContent = best; localStorage.setItem(BEST_KEY, best); }
-      speed += SPEED_STEP;
-      spawnFood();
+      speed += SPEED_STEP; spawnFood();
     } else snake.pop();
   }
 
-  function gameOver(){ over = true; maybeAskInitials(); }
+  function gameOver(){
+    over = true;
+    finalScoreEl.textContent = score;
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden','false');
+    maybeAskInitials();
+  }
 
   function draw(){
     ctx.fillStyle='#0e141b'; ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -213,12 +292,6 @@
     }
     ctx.fillStyle='#ffd166'; roundedRect(food.x*CELL+2,food.y*CELL+2,CELL-4,CELL-4,4);
     snake.forEach((s,i)=>{ ctx.fillStyle=i===0?'#7ee787':'rgba(126,231,135,.9)'; roundedRect(s.x*CELL+2,s.y*CELL+2,CELL-4,CELL-4,5); });
-    if (paused||over){
-      ctx.fillStyle='rgba(0,0,0,.45)'; ctx.fillRect(0,0,canvas.width,canvas.height);
-      ctx.fillStyle='#f5f7fb'; ctx.font='800 40px Inter'; ctx.textAlign='center';
-      ctx.fillText(over?'KONIEC GRY':'PAUZA', canvas.width/2, canvas.height/2-10);
-      ctx.font='600 16px Inter'; ctx.fillText('R – reset • P – pauza', canvas.width/2, canvas.height/2+24);
-    }
   }
 
   function roundedRect(x,y,w,h,r){
@@ -234,6 +307,7 @@
   let last=0;
   function loop(ts){ const dt=(ts-last)/1000; last=ts; update(dt); draw(); requestAnimationFrame(loop); }
 
+  // Responsywne dopasowanie
   function fit(){
     const vw=Math.min(window.innerWidth,document.documentElement.clientWidth||window.innerWidth);
     const vh=window.innerHeight;
@@ -245,7 +319,7 @@
   }
   addEventListener('resize', fit);
 
-  // Modal
+  // --- TOP 3 modal
   const modal=document.getElementById('initialsModal');
   const in1=document.getElementById('in1');
   const in2=document.getElementById('in2');
@@ -278,7 +352,12 @@
     saveTop(top.slice(0,3)); renderTop(); modal.classList.remove('open');
   };
 
-  // START
+  // --- Restart button
+  btnRestart.addEventListener('click', ()=>{
+    reset();
+  });
+
+  // --- Start
   reset(); fit(); requestAnimationFrame(loop);
 })();
 </script>
