@@ -328,6 +328,8 @@
     // jedzenie
     ctx.fillStyle = '#ffd166';
     roundedRect(food.x*CELL+2, food.y*CELL+2, CELL-4, CELL-4, 4);
+if (navigator.vibrate) navigator.vibrate(50); // 50ms wibracji
+new Audio('eat.mp3').play(); // dźwięk z pliku eat.mp3
 
     // wąż
     snake.forEach((s,i) => {
