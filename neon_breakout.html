@@ -20,19 +20,19 @@
       background: radial-gradient(1200px 600px at 10% 0%, #10122a 0%, #08090f 55%, #05060b 100%),
                   radial-gradient(900px 500px at 90% 100%, #12001c 0%, #07070c 60%, #05060b 100%);
       overflow:hidden;
-      touch-action:none; /* globalnie wyłączamy gesty przewijania podczas gry */
+      touch-action:none;
       user-select:none;
     }
     .wrap{ position:relative; width:100%; height:100%; display:grid; place-items:center; padding:16px; }
-    canvas{ width:100%; max-width:940px; aspect-ratio:16/9; border-radius:18px; background:#05060b; box-shadow: 0 0 0 2px rgba(255,255,255,.03) inset, 0 0 60px #000; touch-action:none; }
+    canvas{ width:100%; max-width:940px; aspect-ratio:16/9; border-radius:18px; background:#05060b; box-shadow: 0 0 0 2px rgba(255,255,255,.03) inset, 0 0 60px #000; touch-action:none; z-index:1; }
 
-    .hud{ position:absolute; top:16px; left:50%; transform:translateX(-50%); width:min(92vw,920px); display:flex; justify-content:space-between; gap:12px; pointer-events:none; }
+    .hud{ position:absolute; top:16px; left:50%; transform:translateX(-50%); width:min(92vw,920px); display:flex; justify-content:space-between; gap:12px; pointer-events:none; z-index:10; }
     .chip{ pointer-events:auto; user-select:none; background:var(--glass); backdrop-filter: blur(8px); border:1px solid rgba(255,255,255,.09); border-radius:999px; padding:8px 14px; display:flex; align-items:center; gap:10px; box-shadow:0 0 16px rgba(0, 231, 255, .15), inset 0 0 12px rgba(255,255,255,.03); }
     .chip b{ color:var(--neon1); text-shadow:0 0 8px color-mix(in oklab, var(--neon1) 60%, transparent); }
     .chip button{ all:unset; cursor:pointer; padding:.35rem .8rem; border-radius:999px; background:linear-gradient(90deg, var(--neon1), var(--neon2)); color:white; font-weight:600; box-shadow:0 0 14px color-mix(in oklab, var(--neon1) 60%, transparent); }
     .chip button.secondary{ background:var(--glass); border:1px solid rgba(255,255,255,.12); box-shadow:none }
 
-    .overlay{ position:absolute; inset:0; display:none; place-items:center; padding:16px; }
+    .overlay{ position:absolute; inset:0; display:none; place-items:center; padding:16px; z-index:20; }
     .panel{ width:min(92vw,900px); background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03)); border:1px solid rgba(255,255,255,.12); border-radius:18px; box-shadow: 0 0 60px rgba(0,0,0,.6), inset 0 0 24px rgba(255,255,255,.05); padding:22px; }
     .title{ font-size: clamp(28px, 5vw, 56px); font-weight:900; letter-spacing:.02em; margin:8px 0 6px; background: linear-gradient(90deg, var(--neon1), var(--neon2)); -webkit-background-clip:text; background-clip:text; color:transparent; text-shadow:0 0 18px color-mix(in oklab, var(--neon2) 40%, transparent); }
     .subtitle{ opacity:.85; margin:0 0 16px; }
@@ -44,13 +44,17 @@
     .btn{ all:unset; cursor:pointer; background:linear-gradient(90deg, var(--neon1), var(--neon2)); color:#fff; font-weight:800; letter-spacing:.04em; padding:10px 16px; border-radius:12px; box-shadow:0 0 24px rgba(0, 231, 255, .25); }
     .btn.outline{ background:transparent; border:1px solid rgba(255,255,255,.2); box-shadow:none }
 
-    .touch{ position:absolute; inset:auto 0 10px 0; display:flex; justify-content:center; gap:24px; pointer-events:none; }
+    /* PRZYCISKI DOTYKOWE */
+    .touch{
+      position:absolute; inset:auto 0 10px 0; display:flex; justify-content:center; gap:24px;
+      pointer-events:auto; z-index:30;
+    }
     .touch button{
-      pointer-events:auto; all:unset; width:28vw; max-width:240px; aspect-ratio:5/2; display:grid; place-items:center;
+      all:unset; width:28vw; max-width:240px; aspect-ratio:5/2; display:grid; place-items:center;
       color:white; font-weight:900; letter-spacing:.06em; border-radius:18px;
       background: radial-gradient(120% 140% at 80% -20%, rgba(255,255,255,.16), rgba(255,255,255,.06) 40%, rgba(255,255,255,.02) 80%);
       border:1px solid rgba(255,255,255,.14); box-shadow:0 0 40px rgba(0,0,0,.45), inset 0 0 24px rgba(255,255,255,.06);
-      touch-action:none; user-select:none;
+      touch-action:none; user-select:none; cursor:pointer;
     }
     .touch .fire{ width:22vw; max-width:200px; }
 
@@ -61,6 +65,7 @@
     .muted{ opacity:.75 }
     .right{ text-align:right }
     input[type=text]{ width:100%; padding:10px 12px; border-radius:12px; background:#11131b; border:1px solid rgba(255,255,255,.15); color:var(--fg); font-weight:700; letter-spacing:.2em; text-transform:uppercase; }
+
     .home-btn{
       position: fixed; top: 16px; left: 16px; z-index: 9999;
       display: inline-flex; align-items: center; gap: .5rem; padding: .6rem 1rem; border-radius: 999px;
@@ -93,7 +98,7 @@
     <div id="menu" class="overlay" role="dialog" aria-modal="true" style="display:flex;">
       <div class="panel">
         <div class="title">NEON BREAKOUT</div>
-        <p class="subtitle">Sterowanie: ← → lub A/D, spacja – start / wznowienie. Na telefonie: przyciski lub przeciąganie po planszy.</p>
+        <p class="subtitle">Sterowanie: ← → / A-D, spacja – start. Telefon: przyciski lub przeciąganie po planszy.</p>
         <div class="grid">
           <div class="card">
             <h3>Top 3 – Tablica Wyników</h3>
@@ -146,12 +151,12 @@
   </div>
 
   <script>
-  // ====== Utility ======
-  const lerp = (a,b,t)=>a+(b-a)*t;
+  // ====== Helpers ======
   const clamp = (x,min,max)=>Math.min(max,Math.max(min,x));
   const DPR = Math.max(1, Math.min(window.devicePixelRatio||1, 2));
+  const HAS_POINTER = !!window.PointerEvent;
 
-  // ====== Canvas Setup ======
+  // ====== Canvas ======
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
   function resize(){
@@ -166,7 +171,7 @@
   window.addEventListener('resize', resize, {passive:true});
   resize();
 
-  // ====== Game State ======
+  // ====== State ======
   const State = { MENU:0, PLAY:1, PAUSE:2, OVER:3 };
   let state = State.MENU;
 
@@ -176,15 +181,14 @@
   const saveForm = document.getElementById('saveForm');
   const initialsInput = document.getElementById('initials');
 
-  // Leaderboard (Top 3)
+  // Leaderboard
   const LB_KEY = 'breakout_leaderboard';
-  function getLB(){ try{ return JSON.parse(localStorage.getItem(LB_KEY))||[] }catch{ return [] } }
-  function setLB(arr){ localStorage.setItem(LB_KEY, JSON.stringify(arr.slice(0,3))); renderLB(); }
-  function tryAddScore(name, score){ const lb = getLB(); lb.push({name, score}); lb.sort((a,b)=>b.score - a.score); setLB(lb); }
-  function qualifies(score){ const lb = getLB(); if(lb.length<3) return true; return score > lb[lb.length-1].score; }
+  const getLB=()=>{ try{ return JSON.parse(localStorage.getItem(LB_KEY))||[] }catch{ return [] } };
+  const setLB=(arr)=>{ localStorage.setItem(LB_KEY, JSON.stringify(arr.slice(0,3))); renderLB(); };
+  const tryAddScore=(name,score)=>{ const lb=getLB(); lb.push({name,score}); lb.sort((a,b)=>b.score-a.score); setLB(lb); };
+  const qualifies=(score)=>{ const lb=getLB(); return lb.length<3 || score>lb[lb.length-1].score; };
   function renderLB(){
-    const tbody = document.querySelector('#lbTable tbody');
-    tbody.innerHTML = '';
+    const tbody = document.querySelector('#lbTable tbody'); tbody.innerHTML='';
     const lb = getLB();
     if(lb.length===0){ const tr=document.createElement('tr'); tr.innerHTML=`<td class="muted" colspan="3">Brak zapisanych wyników</td>`; tbody.appendChild(tr); return; }
     lb.slice(0,3).forEach((r,i)=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${i+1}</td><td>${r.name}</td><td class="right">${r.score}</td>`; tbody.appendChild(tr); });
@@ -237,66 +241,77 @@
     if(['ArrowRight','d','D'].includes(e.key)) right=false;
   });
 
-  // Drag paletki po planszy (pointer events)
+  // Przeciąganie po planszy
   let dragging=false;
-  canvas.addEventListener('pointerdown', e=>{
-    dragging=true; canvas.setPointerCapture(e.pointerId);
-    moveFromPointer(e);
-  });
-  canvas.addEventListener('pointermove', e=>{
-    if(dragging) moveFromPointer(e);
-  });
-  const stopDrag = ()=>{ dragging=false; };
-  canvas.addEventListener('pointerup', stopDrag);
-  canvas.addEventListener('pointercancel', stopDrag);
-  function moveFromPointer(e){
+  const moveFromPointer=(e)=>{
     const rect = canvas.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width * WORLD.w;
     PAD.x = clamp(x - PAD.w/2, 0, WORLD.w - PAD.w);
     if(sticky) BALL.x = PAD.x + PAD.w/2;
+  };
+  if(HAS_POINTER){
+    canvas.addEventListener('pointerdown', e=>{ dragging=true; canvas.setPointerCapture(e.pointerId); moveFromPointer(e); });
+    canvas.addEventListener('pointermove', e=>{ if(dragging) moveFromPointer(e); });
+    const stopDrag=()=>{ dragging=false; };
+    canvas.addEventListener('pointerup', stopDrag);
+    canvas.addEventListener('pointercancel', stopDrag);
+  }else{
+    canvas.addEventListener('touchstart', e=>{ dragging=true; const t=e.touches[0]; moveFromPointer({clientX:t.clientX}); }, {passive:false});
+    canvas.addEventListener('touchmove', e=>{ if(!dragging) return; const t=e.touches[0]; moveFromPointer({clientX:t.clientX}); }, {passive:false});
+    canvas.addEventListener('touchend', ()=> dragging=false);
+    canvas.addEventListener('mousedown', e=>{ dragging=true; moveFromPointer(e); });
+    window.addEventListener('mousemove', e=>{ if(dragging) moveFromPointer(e); });
+    window.addEventListener('mouseup', ()=> dragging=false);
   }
 
-  // Przyciski dotykowe – działają na przytrzymanie
+  // Przyciski dotykowe (pewne bindowanie na wszystkich przeglądarkach)
   const leftBtn  = document.getElementById('leftBtn');
   const rightBtn = document.getElementById('rightBtn');
   const fireBtn  = document.getElementById('fireBtn');
 
-  function bindHold(btn, on, off){
-    const down = (e)=>{ e.preventDefault(); btn.setPointerCapture?.(e.pointerId); on(); };
-    const up   = (e)=>{ e.preventDefault(); off(); };
-    btn.addEventListener('pointerdown', down);
-    btn.addEventListener('pointerup', up);
-    btn.addEventListener('pointerleave', up);
-    btn.addEventListener('pointercancel', up);
+  function bindHoldPointer(btn, on, off){
+    btn.addEventListener('pointerdown', e=>{ e.preventDefault(); on(); });
+    btn.addEventListener('pointerup',   e=>{ e.preventDefault(); off(); });
+    btn.addEventListener('pointerleave',off);
+    btn.addEventListener('pointercancel',off);
   }
-  bindHold(leftBtn,  ()=>{ left=true;  right=false; }, ()=>{ left=false;  });
-  bindHold(rightBtn, ()=>{ right=true; left=false; }, ()=>{ right=false; });
+  function bindHoldFallback(btn, on, off){
+    btn.addEventListener('touchstart', e=>{ e.preventDefault(); on(); }, {passive:false});
+    btn.addEventListener('touchend',   e=>{ e.preventDefault(); off(); });
+    btn.addEventListener('touchcancel',e=>{ e.preventDefault(); off(); });
+    btn.addEventListener('mousedown',  e=>{ e.preventDefault(); on(); });
+    document.addEventListener('mouseup', off);
+  }
+  if(HAS_POINTER){
+    bindHoldPointer(leftBtn,  ()=>{ left=true;  right=false; }, ()=>{ left=false; });
+    bindHoldPointer(rightBtn, ()=>{ right=true; left=false; }, ()=>{ right=false; });
+    fireBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); handleFire(); });
+  }else{
+    bindHoldFallback(leftBtn,  ()=>{ left=true;  right=false; }, ()=>{ left=false; });
+    bindHoldFallback(rightBtn, ()=>{ right=true; left=false; }, ()=>{ right=false; });
+    fireBtn.addEventListener('touchstart', e=>{ e.preventDefault(); handleFire(); }, {passive:false});
+    fireBtn.addEventListener('click', e=>{ e.preventDefault(); handleFire(); });
+  }
 
-  // Start/pauza – natychmiastowa reakcja
-  fireBtn.addEventListener('pointerdown', (e)=>{ e.preventDefault(); handleFire(); });
+  // Bezpieczeństwo: po utracie focusu – zatrzymaj „wciśnięcia”
+  document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ left=false; right=false; } });
 
-  // Safety: jak stracimy fokus lub przełączymy kartę – zatrzymaj ruch przycisków
-  document.addEventListener('visibilitychange', ()=>{
-    if(document.hidden){ left=false; right=false; }
-  });
-
-  // ====== Buttons & Overlays ======
+  // ====== Overlays & Buttons ======
   const menuEl = document.getElementById('menu');
   const overEl = document.getElementById('gameover');
-
-  function showOverlay(menuVisible, overVisible){
+  const showOverlay=(menuVisible, overVisible)=>{
     menuEl.style.display = menuVisible ? 'flex' : 'none';
     overEl.style.display = overVisible ? 'flex' : 'none';
-  }
+  };
 
   document.getElementById('pauseBtn').addEventListener('click', ()=>{
     if(state===State.PLAY){ state=State.PAUSE; showOverlay(true,false); }
     else if(state===State.PAUSE){ state=State.PLAY; showOverlay(false,false); }
   });
   document.getElementById('restartBtn').addEventListener('click', ()=>{ restart(); });
-  document.getElementById('startBtn').addEventListener('click', ()=>{ start(); });
-  document.getElementById('againBtn').addEventListener('click', ()=>{ restart(); });
-  document.getElementById('menuBtn').addEventListener('click', ()=>{ state=State.MENU; showOverlay(true,false); });
+  document.getElementById('startBtn').addEventListener('click',  ()=>{ start(); });
+  document.getElementById('againBtn').addEventListener('click',  ()=>{ restart(); });
+  document.getElementById('menuBtn').addEventListener('click',   ()=>{ state=State.MENU; showOverlay(true,false); });
 
   saveForm?.addEventListener('submit', (e)=>{
     e.preventDefault();
@@ -334,8 +349,8 @@
 
   function update(dt){
     const dir = (right?1:0) - (left?1:0);
-    PAD.x += dir * PAD.spd * dt;
-    PAD.x = clamp(PAD.x, 0, WORLD.w - PAD.w);
+    const PADmax = WORLD.w - PAD.w;
+    PAD.x = clamp(PAD.x + dir * PAD.spd * dt, 0, PADmax);
 
     if(sticky){ BALL.x = PAD.x + PAD.w/2; return; }
 
