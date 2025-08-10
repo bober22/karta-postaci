@@ -105,6 +105,14 @@ const finalRound=document.getElementById('finalRound');
 const finalBest=document.getElementById('finalBest');
 uiBest.textContent=best;
 
+// --- KONFIGURACJA RUND / SPAWNU ---
+const CONFIG = {
+  orbChance: 0.45,          // szansa, że w nowym rzędzie pojawi się orb (+1 piłka)
+  hardBonusChance: 0.22,    // szansa, że klocek dostanie +1 HP ponad bazę
+  veryHardBonusChance: 0.10,// dodatkowa szansa, że klocek dostanie jeszcze +1 (czyli łącznie +2)
+  baseHpGrowth: 0.7         // jak szybko rośnie HP z rundą (1 + floor((round-1)*baseHpGrowth))
+};
+
 /* ===== UTIL ===== */
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 const choice=arr=>arr[(Math.random()*arr.length)|0];
@@ -122,19 +130,36 @@ function show(menu,over){ menuEl.style.display=menu?'grid':'none'; overEl.style.
 
 /* ===== GENERACJA RZĘDÓW ===== */
 function spawnRow(){
-  const baseHP = 1 + Math.floor((round-1)*0.7);
+  // zsuń istniejące elementy o 1 w dół
+  for(const b of bricks) b.row++;
+  for(const o of orbs)   o.row++;
+
+  // wylicz bazowe HP z rundy
+  const baseHP = 1 + Math.floor((round-1) * CONFIG.baseHpGrowth);
+
+  // zbuduj nowy rząd
   const newRow=[];
   for(let c=0;c<COLS;c++){
-    if(Math.random()<0.7) newRow.push({col:c, hp: baseHP + (Math.random()<0.18?1:0)});
+    if(Math.random()<0.70){
+      let hp = baseHP;
+      if(Math.random() < CONFIG.hardBonusChance) hp += 1;
+      if(Math.random() < CONFIG.veryHardBonusChance) hp += 1; // sporadycznie +2
+      newRow.push({col:c, hp});
+    }
   }
-  if(Math.random()<0.45){
-    const free=[...Array(COLS).keys()].filter(k=>!newRow.find(b=>b.col===k));
-    if(free.length) orbs.push({col:choice(free), row:0});
-  }
-  for(const b of bricks) b.row++; for(const o of orbs) o.row++;
-  for(const b of newRow) bricks.push({col:b.col,row:0,hp:b.hp});
-}
 
+  // orb (+1 ball) w pustej kolumnie — z zadaną szansą
+  if(Math.random() < CONFIG.orbChance){
+    const freeCols = [...Array(COLS).keys()].filter(k => !newRow.find(b => b.col===k));
+    if(freeCols.length){
+      const idx = freeCols[(Math.random()*freeCols.length)|0];
+      orbs.push({col: idx, row: 0});
+    }
+  }
+
+  // dodaj nowy rząd na górze
+  for(const b of newRow) bricks.push({col:b.col, row:0, hp:b.hp});
+}
 /* ===== START/OVER ===== */
 function startGame(){
   round=1; score=0; ballsCount=1;
