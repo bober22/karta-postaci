@@ -17,7 +17,7 @@
   .wrap{position:relative; width:100%; height:100%; display:grid; place-items:center; padding:16px;}
   canvas{
     width:100%; max-width:540px; aspect-ratio:9/16; border-radius:18px; background:#06070d;
-    box-shadow:0 0 0 2px rgba(255,255,255,.03) inset, 0 0 60px #000; touch-action:none; /* ważne dla iOS/Android */
+    box-shadow:0 0 0 2px rgba(255,255,255,.03) inset, 0 0 60px #000; touch-action:none;
   }
   .hud{position:absolute; top:12px; left:50%; transform:translateX(-50%); width:min(92vw,540px);
        display:flex; justify-content:space-between; gap:10px; pointer-events:none; z-index:5;}
@@ -49,7 +49,7 @@
     <div id="menu" class="overlay" style="display:grid">
       <div class="panel">
         <div class="title">NEON BRICKS & BALLS</div>
-        <p>Przytrzymaj palec/mysz w miejscu celowania, a następnie <b>puść</b> – piłki polecą kolejno. Po turze klocki spadają o 1. Zbieraj zielone <b>●</b>, by mieć więcej piłek.</p>
+        <p>Trzymaj palec/mysz w miejscu, w które chcesz strzelić – celownik idzie <b>dokładnie</b> pod palec. <b>Puść</b>, żeby wystrzelić.</p>
         <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px">
           <button id="start" class="btn">▶ Start</button>
           <button id="clear" class="btn outline">Wyczyść rekord</button>
@@ -70,7 +70,7 @@
   </div>
 
 <script>
-/* ===== PARAMETRY ===== */
+/* ===== ŚWIAT ===== */
 const DPR  = Math.max(1, Math.min(devicePixelRatio||1, 2));
 const W    = 540, H = 960;
 const COLS = 8, CELL = Math.floor((W-40)/COLS);
@@ -81,7 +81,6 @@ const BALL_R = 6, EMIT_DELAY = 60, MAX_STEP = 1/120;
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 function resize(){
-  // Render w skali DPR do stałego świata (540x960)
   canvas.width  = Math.floor(W * DPR);
   canvas.height = Math.floor(H * DPR);
 }
@@ -109,11 +108,15 @@ uiBest.textContent=best;
 /* ===== UTIL ===== */
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 const choice=arr=>arr[(Math.random()*arr.length)|0];
-const HAS_POINTER = 'PointerEvent' in window;
 
-function toWorld(px,py){
+// Mapowanie współrzędnych → świata (dokładnie pod palec)
+function toWorldFromEvent(e){
   const r=canvas.getBoundingClientRect();
-  return {x:(px-r.left)/r.width*W, y:(py-r.top)/r.height*H};
+  let cx, cy;
+  if (e.touches && e.touches[0]) { cx=e.touches[0].clientX; cy=e.touches[0].clientY; }
+  else if (e.changedTouches && e.changedTouches[0]) { cx=e.changedTouches[0].clientX; cy=e.changedTouches[0].clientY; }
+  else { cx=e.clientX; cy=e.clientY; }
+  return { x:(cx - r.left)/r.width*W, y:(cy - r.top)/r.height*H };
 }
 function show(menu,over){ menuEl.style.display=menu?'grid':'none'; overEl.style.display=over?'grid':'none'; }
 
@@ -149,8 +152,11 @@ function gameOver(){
 
 /* ===== STRZAŁ ===== */
 function launch(angle){
-  const minA=0.20*Math.PI, maxA=0.80*Math.PI;
-  const a=clamp(angle,minA,maxA);
+  // Jedyna zasada: nie strzelaj niżej niż naprawdę lekko nad działem
+  const minAngleFromBase = -Math.PI + 0.05; // ~180° w lewo do góry
+  const maxAngleFromBase = -0.05;           // ~180° w prawo do góry (0 to poziom w prawo)
+  const a = clamp(angle, minAngleFromBase, maxAngleFromBase);
+
   balls.length=0;
   const speed=540;
   for(let i=0;i<ballsCount;i++){
@@ -259,13 +265,18 @@ function draw(){
     ctx.shadowBlur=0; ctx.fillStyle='#001d14'; ctx.font='900 12px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('+', cx, cy);
   }
 
-  // podgląd trajektorii
+  // podgląd trajektorii – przez dokładny punkt dotyku
   if(state===State.AIM && aimFrom && aimTo){
-    const dx=aimTo.x-aimFrom.x, dy=aimTo.y-aimFrom.y;
-    let ang=Math.atan2(dy,dx); const minA=0.20*Math.PI, maxA=0.80*Math.PI; ang=clamp(ang,minA,maxA);
+    // jeśli dotyk poniżej działa – przyetnij do minimalnie powyżej linii działa
+    const safeAimY = Math.min(aimTo.y, baseLaunchPos.y - 2);
+    const dx = aimTo.x - aimFrom.x, dy = safeAimY - aimFrom.y;
+    const ang = Math.atan2(dy, dx);
     const len=160, ex=baseLaunchPos.x+Math.cos(ang)*len, ey=baseLaunchPos.y+Math.sin(ang)*len;
-    ctx.strokeStyle='rgba(255,255,255,.35)'; ctx.setLineDash([6,8]); ctx.lineWidth=2;
+    ctx.strokeStyle='rgba(255,255,255,.45)'; ctx.setLineDash([6,8]); ctx.lineWidth=2;
     ctx.beginPath(); ctx.moveTo(baseLaunchPos.x,baseLaunchPos.y); ctx.lineTo(ex,ey); ctx.stroke(); ctx.setLineDash([]);
+
+    // marker pod palcem
+    ctx.fillStyle='rgba(255,255,255,.25)'; ctx.shadowBlur=0; circle(aimTo.x, safeAimY, 4); ctx.fill();
   }
 
   // piłki
@@ -299,44 +310,48 @@ function loop(ts){
 }
 requestAnimationFrame(loop);
 
-/* ===== STEROWANIE – PEWNE BINDOWANIE ===== */
-function aimStart(px,py){
+/* ===== STEROWANIE – działa „jak palec” ===== */
+function aimStart(e){
   if(state!==State.AIM) return;
-  const p=toWorld(px,py);
+  e.preventDefault();
+  const p=toWorldFromEvent(e);
   dragging=true; aiming=true; aimFrom={x:baseLaunchPos.x,y:baseLaunchPos.y}; aimTo=p;
 }
-function aimMove(px,py){
+function aimMove(e){
   if(!dragging) return;
-  aimTo = toWorld(px,py);
+  e.preventDefault();
+  aimTo = toWorldFromEvent(e);
 }
-function aimEnd(){
-  if(!dragging) return; dragging=false;
+function aimEnd(e){
+  if(!dragging) return;
+  e && e.preventDefault();
+  dragging=false;
   if(state===State.AIM && aimFrom && aimTo){
-    const dx=aimTo.x-aimFrom.x, dy=aimTo.y-aimFrom.y;
+    const safeAimY = Math.min(aimTo.y, baseLaunchPos.y - 2);
+    const dx=aimTo.x-aimFrom.x, dy=safeAimY-aimFrom.y;
     launch(Math.atan2(dy,dx));
   }
   aiming=false; aimFrom=null; aimTo=null;
 }
 
-if(HAS_POINTER){
-  canvas.addEventListener('pointerdown', e=>{ e.preventDefault(); canvas.setPointerCapture?.(e.pointerId); aimStart(e.clientX,e.clientY); });
-  canvas.addEventListener('pointermove', e=>{ if(!dragging) return; e.preventDefault(); aimMove(e.clientX,e.clientY); });
-  canvas.addEventListener('pointerup',   e=>{ e.preventDefault(); aimEnd(); });
-  canvas.addEventListener('pointercancel', ()=>{ dragging=false; aiming=false; });
-} else {
-  // Touch fallback
-  canvas.addEventListener('touchstart', e=>{ e.preventDefault(); const t=e.touches[0]; aimStart(t.clientX,t.clientY); }, {passive:false});
-  canvas.addEventListener('touchmove',  e=>{ e.preventDefault(); const t=e.touches[0]; aimMove(t.clientX,t.clientY); }, {passive:false});
-  canvas.addEventListener('touchend',   e=>{ e.preventDefault(); aimEnd(); }, {passive:false});
-  // Mouse fallback
-  canvas.addEventListener('mousedown', e=>{ e.preventDefault(); aimStart(e.clientX,e.clientY); });
-  window.addEventListener('mousemove', e=>{ if(!dragging) return; aimMove(e.clientX,e.clientY); });
-  window.addEventListener('mouseup',   e=>{ aimEnd(); });
+// Pointer Events + fallback
+if ('PointerEvent' in window){
+  canvas.addEventListener('pointerdown', aimStart, {passive:false});
+  canvas.addEventListener('pointermove', aimMove,   {passive:false});
+  canvas.addEventListener('pointerup',   aimEnd,    {passive:false});
+  canvas.addEventListener('pointercancel', aimEnd,  {passive:false});
+}else{
+  canvas.addEventListener('touchstart', aimStart, {passive:false});
+  canvas.addEventListener('touchmove',  aimMove,  {passive:false});
+  canvas.addEventListener('touchend',   aimEnd,   {passive:false});
+  canvas.addEventListener('mousedown',  aimStart);
+  window.addEventListener('mousemove',  aimMove);
+  window.addEventListener('mouseup',    aimEnd);
 }
 
 /* ===== KLAWISZE I UI ===== */
 window.addEventListener('keydown', e=>{
-  if(e.code==='Space'){ if(state===State.AIM) launch(Math.PI*0.5); e.preventDefault(); }
+  if(e.code==='Space' && state===State.AIM){ e.preventDefault(); launch(-Math.PI/2); } // prosto w górę
 });
 document.getElementById('start').addEventListener('click', startGame);
 document.getElementById('clear').addEventListener('click', ()=>{ localStorage.removeItem('nbb_best'); best=0; uiBest.textContent=0; });
