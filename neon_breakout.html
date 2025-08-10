@@ -12,18 +12,19 @@
       --neon2:#ff00e6;
       --neon3:#00ff95;
       --glass:rgba(255,255,255,.06);
-      
     }
-    *{box-sizing:border-box}
-    html,body{height:100%}
+    *{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+    html,body{ height:100% }
     body{
       margin:0; font-family: system-ui, Segoe UI, Roboto, sans-serif; color:var(--fg);
       background: radial-gradient(1200px 600px at 10% 0%, #10122a 0%, #08090f 55%, #05060b 100%),
                   radial-gradient(900px 500px at 90% 100%, #12001c 0%, #07070c 60%, #05060b 100%);
       overflow:hidden;
+      touch-action:none; /* globalnie wyłączamy gesty przewijania podczas gry */
+      user-select:none;
     }
     .wrap{ position:relative; width:100%; height:100%; display:grid; place-items:center; padding:16px; }
-    canvas{ width:100%; max-width:940px; aspect-ratio:16/9; border-radius:18px; background: #05060b; box-shadow: 0 0 0 2px rgba(255,255,255,.03) inset, 0 0 60px #000; }
+    canvas{ width:100%; max-width:940px; aspect-ratio:16/9; border-radius:18px; background:#05060b; box-shadow: 0 0 0 2px rgba(255,255,255,.03) inset, 0 0 60px #000; touch-action:none; }
 
     .hud{ position:absolute; top:16px; left:50%; transform:translateX(-50%); width:min(92vw,920px); display:flex; justify-content:space-between; gap:12px; pointer-events:none; }
     .chip{ pointer-events:auto; user-select:none; background:var(--glass); backdrop-filter: blur(8px); border:1px solid rgba(255,255,255,.09); border-radius:999px; padding:8px 14px; display:flex; align-items:center; gap:10px; box-shadow:0 0 16px rgba(0, 231, 255, .15), inset 0 0 12px rgba(255,255,255,.03); }
@@ -44,7 +45,13 @@
     .btn.outline{ background:transparent; border:1px solid rgba(255,255,255,.2); box-shadow:none }
 
     .touch{ position:absolute; inset:auto 0 10px 0; display:flex; justify-content:center; gap:24px; pointer-events:none; }
-    .touch button{ pointer-events:auto; all:unset; width:28vw; max-width:240px; aspect-ratio:5/2; display:grid; place-items:center; color:white; font-weight:900; letter-spacing:.06em; border-radius:18px; background: radial-gradient(120% 140% at 80% -20%, rgba(255,255,255,.16), rgba(255,255,255,.06) 40%, rgba(255,255,255,.02) 80%); border:1px solid rgba(255,255,255,.14); box-shadow:0 0 40px rgba(0,0,0,.45), inset 0 0 24px rgba(255,255,255,.06); }
+    .touch button{
+      pointer-events:auto; all:unset; width:28vw; max-width:240px; aspect-ratio:5/2; display:grid; place-items:center;
+      color:white; font-weight:900; letter-spacing:.06em; border-radius:18px;
+      background: radial-gradient(120% 140% at 80% -20%, rgba(255,255,255,.16), rgba(255,255,255,.06) 40%, rgba(255,255,255,.02) 80%);
+      border:1px solid rgba(255,255,255,.14); box-shadow:0 0 40px rgba(0,0,0,.45), inset 0 0 24px rgba(255,255,255,.06);
+      touch-action:none; user-select:none;
+    }
     .touch .fire{ width:22vw; max-width:200px; }
 
     table{ width:100%; border-collapse:collapse; }
@@ -55,30 +62,21 @@
     .right{ text-align:right }
     input[type=text]{ width:100%; padding:10px 12px; border-radius:12px; background:#11131b; border:1px solid rgba(255,255,255,.15); color:var(--fg); font-weight:700; letter-spacing:.2em; text-transform:uppercase; }
     .home-btn{
-  position: fixed;
-  top: 16px; left: 16px;
-  z-index: 9999;
-  display: inline-flex; align-items: center; gap: .5rem;
-  padding: .6rem 1rem;
-  border-radius: 999px;
-  background: var(--glass, rgba(255,255,255,.06));
-  color: var(--fg, #e6f3ff);
-  text-decoration: none;
-  border: 1px solid color-mix(in oklab, var(--neon1,#00e7ff), #fff 20%);
-  box-shadow: 0 0 12px var(--neon1,#00e7ff), inset 0 0 8px rgba(255,255,255,.08);
-  backdrop-filter: blur(8px);
-  transition: .2s transform, .2s box-shadow, .2s filter;
-}
-.home-btn:hover{ transform: translateY(-1px); box-shadow: 0 0 16px var(--neon1), 0 0 32px var(--neon2,#ff00e6); filter: brightness(1.1); }
-.home-btn:active{ transform: translateY(0); }
-@media (max-width:600px){
-  .home-btn{ padding:.5rem .9rem; font-size:.95rem; }
-}
+      position: fixed; top: 16px; left: 16px; z-index: 9999;
+      display: inline-flex; align-items: center; gap: .5rem; padding: .6rem 1rem; border-radius: 999px;
+      background: var(--glass, rgba(255,255,255,.06)); color: var(--fg, #e6f3ff); text-decoration: none;
+      border: 1px solid color-mix(in oklab, var(--neon1,#00e7ff), #fff 20%);
+      box-shadow: 0 0 12px var(--neon1,#00e7ff), inset 0 0 8px rgba(255,255,255,.08);
+      backdrop-filter: blur(8px); transition: .2s transform, .2s box-shadow, .2s filter;
+    }
+    .home-btn:hover{ transform: translateY(-1px); box-shadow: 0 0 16px var(--neon1), 0 0 32px var(--neon2,#ff00e6); filter: brightness(1.1); }
+    .home-btn:active{ transform: translateY(0); }
+    @media (max-width:600px){ .home-btn{ padding:.5rem .9rem; font-size:.95rem; } }
   </style>
 </head>
-<body>  
-    <a class="home-btn" href="index.html" aria-label="Powrót na stronę główną">⟵ Strona główna</a>
-    
+<body>
+  <a class="home-btn" href="index.html" aria-label="Powrót na stronę główną">⟵ Strona główna</a>
+
   <div class="wrap">
     <canvas id="game" aria-label="Neon Breakout – gra"></canvas>
 
@@ -90,11 +88,12 @@
         <button id="restartBtn" aria-label="Restart">↻ Restart</button>
       </div>
     </div>
+
     <!-- Start / Menu -->
     <div id="menu" class="overlay" role="dialog" aria-modal="true" style="display:flex;">
       <div class="panel">
         <div class="title">NEON BREAKOUT</div>
-        <p class="subtitle">Sterowanie: ← → lub A/D, spacja – start / wznowienie. Na telefonie: dotykowe przyciski / przeciąganie.</p>
+        <p class="subtitle">Sterowanie: ← → lub A/D, spacja – start / wznowienie. Na telefonie: przyciski lub przeciąganie po planszy.</p>
         <div class="grid">
           <div class="card">
             <h3>Top 3 – Tablica Wyników</h3>
@@ -164,7 +163,7 @@
     scale = canvas.width / 940;
   }
   let scale = 1;
-  window.addEventListener('resize', resize);
+  window.addEventListener('resize', resize, {passive:true});
   resize();
 
   // ====== Game State ======
@@ -226,39 +225,66 @@
 
   // ====== Input ======
   let left=false, right=false;
+
+  // Klawiatura (PC)
   window.addEventListener('keydown', e=>{
-    if(['ArrowLeft','a','A'].includes(e.key)) left=true;
-    if(['ArrowRight','d','D'].includes(e.key)) right=true;
-    if(e.code==='Space') handleFire();
+    if(['ArrowLeft','a','A'].includes(e.key)) { left=true; e.preventDefault(); }
+    if(['ArrowRight','d','D'].includes(e.key)) { right=true; e.preventDefault(); }
+    if(e.code==='Space'){ e.preventDefault(); handleFire(); }
   });
   window.addEventListener('keyup', e=>{
     if(['ArrowLeft','a','A'].includes(e.key)) left=false;
     if(['ArrowRight','d','D'].includes(e.key)) right=false;
   });
 
-  const touchCtl = document.getElementById('touchCtl');
+  // Drag paletki po planszy (pointer events)
   let dragging=false;
-  canvas.addEventListener('touchstart', e=>{ dragging=true; moveFromTouch(e); }, {passive:true});
-  canvas.addEventListener('touchmove', e=>{ if(dragging) moveFromTouch(e); }, {passive:true});
-  canvas.addEventListener('touchend', ()=> dragging=false);
-  function moveFromTouch(e){
+  canvas.addEventListener('pointerdown', e=>{
+    dragging=true; canvas.setPointerCapture(e.pointerId);
+    moveFromPointer(e);
+  });
+  canvas.addEventListener('pointermove', e=>{
+    if(dragging) moveFromPointer(e);
+  });
+  const stopDrag = ()=>{ dragging=false; };
+  canvas.addEventListener('pointerup', stopDrag);
+  canvas.addEventListener('pointercancel', stopDrag);
+  function moveFromPointer(e){
     const rect = canvas.getBoundingClientRect();
-    const x = (e.touches[0].clientX - rect.left) / rect.width * WORLD.w;
+    const x = (e.clientX - rect.left) / rect.width * WORLD.w;
     PAD.x = clamp(x - PAD.w/2, 0, WORLD.w - PAD.w);
     if(sticky) BALL.x = PAD.x + PAD.w/2;
   }
-  document.getElementById('leftBtn').addEventListener('touchstart', ()=>left=true, {passive:true});
-  document.getElementById('leftBtn').addEventListener('touchend', ()=>left=false);
-  document.getElementById('rightBtn').addEventListener('touchstart', ()=>right=true, {passive:true});
-  document.getElementById('rightBtn').addEventListener('touchend', ()=>right=false);
-  document.getElementById('fireBtn').addEventListener('click', handleFire);
+
+  // Przyciski dotykowe – działają na przytrzymanie
+  const leftBtn  = document.getElementById('leftBtn');
+  const rightBtn = document.getElementById('rightBtn');
+  const fireBtn  = document.getElementById('fireBtn');
+
+  function bindHold(btn, on, off){
+    const down = (e)=>{ e.preventDefault(); btn.setPointerCapture?.(e.pointerId); on(); };
+    const up   = (e)=>{ e.preventDefault(); off(); };
+    btn.addEventListener('pointerdown', down);
+    btn.addEventListener('pointerup', up);
+    btn.addEventListener('pointerleave', up);
+    btn.addEventListener('pointercancel', up);
+  }
+  bindHold(leftBtn,  ()=>{ left=true;  right=false; }, ()=>{ left=false;  });
+  bindHold(rightBtn, ()=>{ right=true; left=false; }, ()=>{ right=false; });
+
+  // Start/pauza – natychmiastowa reakcja
+  fireBtn.addEventListener('pointerdown', (e)=>{ e.preventDefault(); handleFire(); });
+
+  // Safety: jak stracimy fokus lub przełączymy kartę – zatrzymaj ruch przycisków
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.hidden){ left=false; right=false; }
+  });
 
   // ====== Buttons & Overlays ======
   const menuEl = document.getElementById('menu');
   const overEl = document.getElementById('gameover');
 
   function showOverlay(menuVisible, overVisible){
-    // JEDYNE źródło prawdy dla widoczności overlayów
     menuEl.style.display = menuVisible ? 'flex' : 'none';
     overEl.style.display = overVisible ? 'flex' : 'none';
   }
@@ -301,7 +327,6 @@
     requestAnimationFrame(loop);
     const dt = Math.min(0.034, (ts - last)/1000 || 0);
     last = ts;
-
     if(state===State.PLAY){ update(dt); }
     draw();
   }
