@@ -105,51 +105,18 @@ const finalRound=document.getElementById('finalRound');
 const finalBest=document.getElementById('finalBest');
 uiBest.textContent=best;
 
-// --- KONFIGURACJA RUND / SPAWNU ---
+/* --- KONFIGURACJA RUND / SPAWNU --- */
 const CONFIG = {
-  orbChance: 0.45,          // szansa, że w nowym rzędzie pojawi się orb (+1 piłka)
-  hardBonusChance: 0.22,    // szansa, że klocek dostanie +1 HP ponad bazę
-  veryHardBonusChance: 0.10,// dodatkowa szansa, że klocek dostanie jeszcze +1 (czyli łącznie +2)
-  baseHpGrowth: 0.7         // jak szybko rośnie HP z rundą (1 + floor((round-1)*baseHpGrowth))
+  orbChance: 0.45,          // szansa na orb (+1 piłka)
+  hardBonusChance: 0.22,    // +1 HP
+  veryHardBonusChance: 0.10,// dodatkowe +1 HP (razem +2)
+  baseHpGrowth: 0.7         // 1 + floor((round-1)*baseHpGrowth)
 };
-
-// --- KONIEC TURY ---
-// Funkcja sprawdzająca, czy wszystkie piłki wróciły i trzeba rozpocząć nową rundę
-function checkEndOfTurn() {
-    let allReturned = balls.every(b => b.y >= baseLaunchPos.y && !b.active);
-    if (allReturned && state === State.SHOOT) {
-        // ustaw bazową pozycję strzału (uwzględnia przesunięcie od ostatniej piłki)
-        if (nextLaunchPos && nextLaunchPos._set) {
-            baseLaunchPos = {
-                x: clamp(nextLaunchPos.x, LEFT + BALL_R, LEFT + COLS * CELL - BALL_R),
-                y: baseLaunchPos.y
-            };
-        }
-        nextLaunchPos = { ...baseLaunchPos };
-
-        // nowa runda: zsuń i dodaj nowy rząd
-        spawnRow();
-
-        // zwiększ numer rundy w UI
-        round++;
-        uiRound.textContent = round;
-
-        // sprawdź, czy przegrana
-        const lost = bricks.some(k => TOP + k.row * ROW_H + ROW_H >= H - 36);
-        if (lost) {
-            gameOver();
-            return;
-        }
-
-        // przejście do trybu celowania
-        state = State.AIM;
-        fastReturn = false;
-    }
-}
 
 /* ===== UTIL ===== */
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 const choice=arr=>arr[(Math.random()*arr.length)|0];
+function show(menu,over){ menuEl.style.display=menu?'grid':'none'; overEl.style.display=over?'grid':'none'; }
 
 // Mapowanie współrzędnych → świata (dokładnie pod palec)
 function toWorldFromEvent(e){
@@ -160,9 +127,8 @@ function toWorldFromEvent(e){
   else { cx=e.clientX; cy=e.clientY; }
   return { x:(cx - r.left)/r.width*W, y:(cy - r.top)/r.height*H };
 }
-function show(menu,over){ menuEl.style.display=menu?'grid':'none'; overEl.style.display=over?'grid':'none'; }
 
-/* ===== GENERACJA RZĘDÓW ===== */
+/* ===== GENERACJA RZĘDU ===== */
 function spawnRow(){
   // zsuń istniejące elementy o 1 w dół
   for(const b of bricks) b.row++;
@@ -194,6 +160,7 @@ function spawnRow(){
   // dodaj nowy rząd na górze
   for(const b of newRow) bricks.push({col:b.col, row:0, hp:b.hp});
 }
+
 /* ===== START/OVER ===== */
 function startGame(){
   round=1; score=0; ballsCount=1;
@@ -211,11 +178,8 @@ function gameOver(){
 
 /* ===== STRZAŁ ===== */
 function launch(angle){
-  // Jedyna zasada: nie strzelaj niżej niż naprawdę lekko nad działem
-  const minAngleFromBase = -Math.PI + 0.05; // ~180° w lewo do góry
-  const maxAngleFromBase = -0.05;           // ~180° w prawo do góry (0 to poziom w prawo)
-  const a = clamp(angle, minAngleFromBase, maxAngleFromBase);
-
+  // Nie pozwól strzelać w dół (minimalnie nad działem)
+  const a = clamp(angle, -Math.PI + 0.05, -0.05);
   balls.length=0;
   const speed=540;
   for(let i=0;i<ballsCount;i++){
@@ -226,9 +190,10 @@ function launch(angle){
   state=State.FLY;
 }
 
-/* ===== FIZYKA ===== */
+/* ===== FIZYKA + KONIEC TURY ===== */
 function updateBalls(dt){
   let allReturned=true;
+
   for(const b of balls){
     if(b.delay>0){ b.delay -= dt*1000; continue; }
     if(!b.active){ b.active=true; }
@@ -268,7 +233,7 @@ function updateBalls(dt){
 
       tleft -= t;
 
-      // Dno → powrót
+      // Dno → powrót piłki
       if(b.y > H - 26){
         if(nextLaunchPos && nextLaunchPos._set!==true) nextLaunchPos={x:b.x, y:baseLaunchPos.y, _set:true};
         b.active=false; b.vx=0; b.vy=0; b.y=H-20;
@@ -276,15 +241,27 @@ function updateBalls(dt){
       }
     }
   }
+
+  // Sprzątanie zniszczonych i zebranych
   bricks = bricks.filter(k=>k.hp>0);
   orbs   = orbs.filter(o=>o.col>=0);
 
-  if(allReturned){
-    if(nextLaunchPos && nextLaunchPos._set) baseLaunchPos={x:clamp(nextLaunchPos.x, LEFT+BALL_R, LEFT+COLS*CELL-BALL_R), y:baseLaunchPos.y};
-    nextLaunchPos={...baseLaunchPos};
-    for(const k of bricks) k.row++; for(const o of orbs) o.row++;
-    spawnRow(); round++; uiRound.textContent=round;
+  // --- KONIEC TURY: wszystkie piłki wróciły? ---
+  if(allReturned && state===State.FLY){
+    // ustaw bazę strzału na pierwszą wracającą kulkę (jeśli była)
+    if(nextLaunchPos && nextLaunchPos._set){
+      baseLaunchPos = {
+        x: clamp(nextLaunchPos.x, LEFT+BALL_R, LEFT+COLS*CELL-BALL_R),
+        y: baseLaunchPos.y
+      };
+    }
+    nextLaunchPos = {...baseLaunchPos};
 
+    // nowa runda: ZSUŃ i DODAJ nowy rząd (spawnRow robi jedno i drugie)
+    spawnRow();
+    round++; uiRound.textContent=round;
+
+    // przegrana?
     const lost = bricks.some(k => TOP + k.row*ROW_H + ROW_H >= H - 36);
     if(lost){ gameOver(); return; }
 
@@ -324,9 +301,8 @@ function draw(){
     ctx.shadowBlur=0; ctx.fillStyle='#001d14'; ctx.font='900 12px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('+', cx, cy);
   }
 
-  // podgląd trajektorii – przez dokładny punkt dotyku
+  // podgląd trajektorii – dokładnie przez punkt dotyku
   if(state===State.AIM && aimFrom && aimTo){
-    // jeśli dotyk poniżej działa – przyetnij do minimalnie powyżej linii działa
     const safeAimY = Math.min(aimTo.y, baseLaunchPos.y - 2);
     const dx = aimTo.x - aimFrom.x, dy = safeAimY - aimFrom.y;
     const ang = Math.atan2(dy, dx);
