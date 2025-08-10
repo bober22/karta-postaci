@@ -114,34 +114,37 @@ const CONFIG = {
 };
 
 // --- KONIEC TURY ---
-let allReturned = balls.every(b => b.y >= baseLaunchPos.y && !b.active);
-if (allReturned && state === State.SHOOT) {
-    // ustaw bazową pozycję strzału (w tym ewentualne przesunięcie od ostatniej piłki)
-    if (nextLaunchPos && nextLaunchPos._set) {
-        baseLaunchPos = {
-            x: clamp(nextLaunchPos.x, LEFT + BALL_R, LEFT + COLS * CELL - BALL_R),
-            y: baseLaunchPos.y
-        };
+// Funkcja sprawdzająca, czy wszystkie piłki wróciły i trzeba rozpocząć nową rundę
+function checkEndOfTurn() {
+    let allReturned = balls.every(b => b.y >= baseLaunchPos.y && !b.active);
+    if (allReturned && state === State.SHOOT) {
+        // ustaw bazową pozycję strzału (uwzględnia przesunięcie od ostatniej piłki)
+        if (nextLaunchPos && nextLaunchPos._set) {
+            baseLaunchPos = {
+                x: clamp(nextLaunchPos.x, LEFT + BALL_R, LEFT + COLS * CELL - BALL_R),
+                y: baseLaunchPos.y
+            };
+        }
+        nextLaunchPos = { ...baseLaunchPos };
+
+        // nowa runda: zsuń i dodaj nowy rząd
+        spawnRow();
+
+        // zwiększ numer rundy w UI
+        round++;
+        uiRound.textContent = round;
+
+        // sprawdź, czy przegrana
+        const lost = bricks.some(k => TOP + k.row * ROW_H + ROW_H >= H - 36);
+        if (lost) {
+            gameOver();
+            return;
+        }
+
+        // przejście do trybu celowania
+        state = State.AIM;
+        fastReturn = false;
     }
-    nextLaunchPos = { ...baseLaunchPos };
-
-    // nowa runda: zsuń i dodaj nowy rząd
-    spawnRow();
-
-    // zwiększ numer rundy w UI
-    round++;
-    uiRound.textContent = round;
-
-    // sprawdź, czy przegrana
-    const lost = bricks.some(k => TOP + k.row * ROW_H + ROW_H >= H - 36);
-    if (lost) {
-        gameOver();
-        return;
-    }
-
-    // przejście do trybu celowania
-    state = State.AIM;
-    fastReturn = false;
 }
 
 /* ===== UTIL ===== */
