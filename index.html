@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bober & Trzmielka</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial, Helvetica, sans-serif;
+}
+
+body{
+    overflow:hidden;
+    background:black;
+}
+
+.wrapper{
+    position:relative;
+    width:100%;
+    height:100vh;
+    display:flex;
+}
+
+/* POŁOWY */
+.side{
+    width:50%;
+    height:100%;
+    background-size:cover;
+    background-position:center;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    transition:0.5s ease;
+    position:relative;
+}
+
+.left{
+    background-image:url("twoje-tlo.jpg");
+}
+
+.right{
+    background-image:url("zony-tlo.jpg");
+}
+
+/* LOGO */
+.logo{
+    width:260px;
+    margin-bottom:40px;
+    z-index:2;
+    transition:0.4s;
+}
+
+.side:hover .logo{
+    transform:scale(1.08);
+}
+
+/* LINKI */
+.links{
+    display:flex;
+    flex-direction:column;
+    gap:15px;
+    z-index:2;
+}
+
+.links a{
+    text-decoration:none;
+    padding:12px 25px;
+    font-weight:bold;
+    letter-spacing:1px;
+    border-radius:8px;
+    transition:all 0.3s ease;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    color:white;
+}
+
+/* KOLORY */
+.youtube{ background:#ff0000; }
+.tiktok{ background:#111; }
+.twitch{ background:#9146FF; }
+.kick{ background:#53FC18; color:black; }
+.instagram{ background:linear-gradient(45deg,#405DE6,#833AB4,#E1306C,#FD1D1D); }
+
+.links a:hover{
+    transform:scale(1.08);
+    box-shadow:0 0 15px currentColor,
+               0 0 30px currentColor,
+               0 0 50px currentColor;
+}
+
+/* HOVER STRON */
+.wrapper:hover .side{
+    filter:grayscale(100%);
+}
+
+.side:hover{
+    filter:none !important;
+    transform:scale(1.05);
+    z-index:3;
+}
+
+
+/* PRZYCISK PTKM */
+.ptkm-btn{
+    position:absolute;
+    bottom:20px;
+    right:20px;
+    background:#111;
+    color:white;
+    padding:12px 20px;
+    border-radius:8px;
+    text-decoration:none;
+    font-weight:bold;
+    transition:0.3s;
+    z-index:20;
+}
+
+.ptkm-btn:hover{
+    background:#a020f0;
+    box-shadow:0 0 15px #a020f0,
+               0 0 30px #a020f0;
+}
+</style>
+</head>
+
+<body>
+
+<div class="wrapper">
+
+    <!-- TWOJA STRONA -->
+    <div class="side left">
+        <img src="bober.png" class="logo">
+        <div class="links">
+            <a href="#" class="youtube"><i class="fab fa-youtube"></i> YouTube</a>
+            <a href="#" class="tiktok"><i class="fab fa-tiktok"></i> TikTok</a>
+            <a href="#" class="twitch"><i class="fab fa-twitch"></i> Twitch</a>
+            <a href="#" class="kick"><i class="fa-solid fa-play"></i> Kick</a>
+        </div>
+    </div>
+
+    <!-- STRONA ŻONY -->
+    <div class="side right">
+        <img src="trzmielka.png" class="logo">
+        <div class="links">
+            <a href="#" class="instagram"><i class="fab fa-instagram"></i> Instagram</a>
+            <a href="#" class="tiktok"><i class="fab fa-tiktok"></i> TikTok</a>
+            <a href="#" class="twitch"><i class="fab fa-twitch"></i> Twitch</a>
+            <a href="#" class="youtube"><i class="fab fa-youtube"></i> YouTube</a>
+        </div>
+    </div>
+
+  
+    <!-- PTKM -->
+    <a href="ptkm.html" class="ptkm-btn">PTKM</a>
+
+</div>
+
+</body>
+</html>
