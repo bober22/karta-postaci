@@ -21,7 +21,6 @@ body{
 }
 
 .wrapper{
-    position:relative;
     width:100%;
     height:100vh;
     display:flex;
@@ -49,11 +48,27 @@ body{
     background-image:url("zony-tlo.jpg");
 }
 
+/* CIEMNA WARSTWA */
+.side::before{
+    content:"";
+    position:absolute;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,0.4);
+    top:0;
+    left:0;
+    z-index:1;
+}
+
+.side > *{
+    position:relative;
+    z-index:2;
+}
+
 /* LOGO */
 .logo{
     width:260px;
     margin-bottom:40px;
-    z-index:2;
     transition:0.4s;
 }
 
@@ -66,7 +81,6 @@ body{
     display:flex;
     flex-direction:column;
     gap:15px;
-    z-index:2;
 }
 
 .links a{
@@ -103,14 +117,40 @@ body{
 
 .side:hover{
     filter:none !important;
-    transform:scale(1.05);
+    transform:scale(1.03);
     z-index:3;
 }
 
+/* ŚRODKOWY YOUTUBE */
+.center-yt{
+    position:fixed;
+    top:50%;
+    left:50%;
+    transform:translate(-50%, -50%);
+    background:#ff0000;
+    color:white;
+    padding:18px 35px;
+    font-size:18px;
+    font-weight:bold;
+    border-radius:12px;
+    text-decoration:none;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    z-index:30;
+    transition:0.3s;
+}
+
+.center-yt:hover{
+    transform:translate(-50%, -50%) scale(1.1);
+    box-shadow:0 0 20px #ff0000,
+               0 0 40px #ff0000,
+               0 0 70px #ff0000;
+}
 
 /* PRZYCISK PTKM */
 .ptkm-btn{
-    position:absolute;
+    position:fixed;
     bottom:20px;
     right:20px;
     background:#111;
@@ -157,11 +197,15 @@ body{
         </div>
     </div>
 
-  
-    <!-- PTKM -->
-    <a href="ptkm.html" class="ptkm-btn">PTKM</a>
-
 </div>
+
+<!-- WSPÓLNY YOUTUBE -->
+<a href="https://youtube.com/TWOJ_WSPOLNY_KANAL" class="center-yt">
+    <i class="fab fa-youtube"></i> Wspólny YouTube
+</a>
+
+<!-- PTKM -->
+<a href="ptkm.html" class="ptkm-btn">PTKM</a>
 
 </body>
 </html>
